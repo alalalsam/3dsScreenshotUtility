@@ -24,12 +24,16 @@
 *         reasonable ways as different from the original version.
 */
 
+//alalalsam's changes: took out char/string drawing stuff and unnecessary includes
+
+#include <string.h>			//previously included as part of "memory.h"
 #include <3ds.h>
+#include <3ds/types.h> 		//previously included as part of "memory.h"
 #include <stdarg.h>
 #include "fmt.h"
 #include "draw.h"
-#include "font.h"
-#include "memory.h"
+//#include "font.h"
+//#include "memory.h"
 #include "menu.h"
 #include "utils.h"
 #include "csvc.h"
@@ -56,6 +60,7 @@ void Draw_Unlock(void)
     RecursiveLock_Unlock(&lock);
 }
 
+/*
 void Draw_DrawCharacter(u32 posX, u32 posY, u32 color, char character)
 {
     u16 *const fb = (u16 *)FB_BOTTOM_VRAM_ADDR;
@@ -74,8 +79,9 @@ void Draw_DrawCharacter(u32 posX, u32 posY, u32 color, char character)
         }
     }
 }
+*/
 
-
+/*
 u32 Draw_DrawString(u32 posX, u32 posY, u32 color, const char *string)
 {
     for(u32 i = 0, line_i = 0; i < strlen(string); i++)
@@ -107,7 +113,10 @@ u32 Draw_DrawString(u32 posX, u32 posY, u32 color, const char *string)
 
     return posY;
 }
+*/
 
+
+/*
 u32 Draw_DrawFormattedString(u32 posX, u32 posY, u32 color, const char *fmt, ...)
 {
     char buf[DRAW_MAX_FORMATTED_STRING_SIZE + 1];
@@ -118,6 +127,7 @@ u32 Draw_DrawFormattedString(u32 posX, u32 posY, u32 color, const char *fmt, ...
 
     return Draw_DrawString(posX, posY, color, buf);
 }
+*/
 
 void Draw_FillFramebuffer(u32 value)
 {

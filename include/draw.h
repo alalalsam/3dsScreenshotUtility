@@ -87,11 +87,11 @@ void Draw_Init(void);
 void Draw_Lock(void);
 void Draw_Unlock(void);
 
-void Draw_DrawCharacter(u32 posX, u32 posY, u32 color, char character);
-u32 Draw_DrawString(u32 posX, u32 posY, u32 color, const char *string);
+//void Draw_DrawCharacter(u32 posX, u32 posY, u32 color, char character);
+//u32 Draw_DrawString(u32 posX, u32 posY, u32 color, const char *string);
 
-__attribute__((format(printf,4,5)))
-u32 Draw_DrawFormattedString(u32 posX, u32 posY, u32 color, const char *fmt, ...);
+//__attribute__((format(printf,4,5)))
+//u32 Draw_DrawFormattedString(u32 posX, u32 posY, u32 color, const char *fmt, ...);
 
 void Draw_FillFramebuffer(u32 value);
 void Draw_ClearFramebuffer(void);
