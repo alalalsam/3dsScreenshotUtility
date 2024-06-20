@@ -27,18 +27,24 @@
 //alalalsam's changes: took out char/string drawing stuff and unnecessary includes
 
 #include <string.h>			//previously included as part of "memory.h"
-#include <3ds.h>
+
 #include <3ds/types.h> 		//previously included as part of "memory.h"
 #include <stdarg.h>
-#include "fmt.h"
-#include "draw.h"
+
+
 //#include "font.h"
 //#include "memory.h"
-#include "menu.h"
-#include "utils.h"
-#include "csvc.h"
+//#include "menu.h"
+//#include "utils.h"
 
+//delete includes above this comment?
 #define KERNPA2VA(a)            ((a) + (GET_VERSION_MINOR(osGetKernelVersion()) < 44 ? 0xD0000000 : 0xC0000000))
+
+#include <3ds/types.h>
+#include "fmt.h"
+#include <3ds.h>
+#include "draw.h"
+#include "csvc.h"
 
 static u32 gpuSavedFramebufferAddr1, gpuSavedFramebufferAddr2, gpuSavedFramebufferFormat, gpuSavedFramebufferStride, gpuSavedFillColor;
 static u32 framebufferCacheSize;

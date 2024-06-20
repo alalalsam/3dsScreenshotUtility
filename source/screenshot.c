@@ -3,9 +3,10 @@
 // changes:
 // modified screenshot output directory
 // removed success, failure, and mem write time messages
-// removed  while(!(waitInput() & KEY_B) && !menuShouldExit); at end
+// removed  while(!(waitInput() & KEY_B) && !menuShouldExit); at end of screenshot_TakeScreenshot
+// 
 
-//this code contains functions which, when called, should take screenshot and save to root/screenshots in SD
+//current contents: functions which, when called, should take screenshot and save to root/screenshots in SD
 
 #include "menus.h"
 #include "menu.h"
@@ -18,7 +19,7 @@
 #include "menus/screen_filters.h"
 #include "plugin.h"
 
-
+//delete includes above this comment?
 
 #include "process_patches.h"
 #include "luminance.h"
