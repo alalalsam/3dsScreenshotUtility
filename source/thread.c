@@ -16,8 +16,8 @@
 #include "utils.h"
 #include "csvc.h"
 #include "screenshot.h"
-#include "ifile.h"
-#include "n3ds.h"
+
+//#include "n3ds.h"
 #include "fmt.h"
 
 static MyThread screenshotThread;
@@ -65,37 +65,6 @@ MyThread *screenshotCreateThread(void)
 }
 
 
-void handleShellOpened(void)
-{
-    // Somtimes this is called before Rosalina thread main executes,
-    // sometimes not... how fun :))
-
-    s64 out = 0;
-    svcGetSystemInfo(&out, 0x10000, 4);
-    u32 multiConfig = (u32)out;
-//    u32 forceOp = (multiConfig >> (2 * (u32)FORCEAUDIOOUTPUT)) & 3;
-
-    // We need to check here if GSP has done its init stuff, in particular
-    // clock and reset, otherwise we'll cause core1 to be in a waitstate
-    // forever (if we access a GPU reg while the GPU block's clock is off).
-    // (GSP does its init before registering its services)
-    if (isServiceUsable("gsp::Gpu"))
-        ScreenFiltersMenu_RestoreSettings();
-
-//    if (forceOp != 0 && isServiceUsable("cdc:CHK"))
-//        forceAudioOutput(forceOp);
-}
-
-static s64 clkRate = 0, higherClkRate = 0, L2CacheEnabled = 0;
-void N3DSMenu_UpdateStatus(void)
-{
-    svcGetSystemInfo(&clkRate, 0x10001, 0);
-    svcGetSystemInfo(&higherClkRate, 0x10001, 1);
-    svcGetSystemInfo(&L2CacheEnabled, 0x10001, 2);
-
-    N3DSMenu.items[0].title = L2CacheEnabled ? "Disable L2 cache" : "Enable L2 cache";
-    sprintf(clkRateBuf, "Set clock rate to %luMHz", clkRate != 268 ? 268 : (u32)higherClkRate);
-}
 
 
 u32 time0 = 0;
@@ -103,29 +72,27 @@ u32 time1 = 0;
 //adapted from menuThreadMain
 void screenshotThreadMain(void)
 {
-    if(isN3DS)
-        N3DSMenu_UpdateStatus();
+    //if(isN3DS)
+    //    N3DSMenu_UpdateStatus();
 
     while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
         svcSleepThread(250 * 1000 * 1000LL);
 
-    handleShellOpened();
+   // handleShellOpened();
 
     hidInit(); // assume this doesn't fail
-    isHidInitialized = true;
+    //isHidInitialized = true;
 
-    while(!preTerminationRequested)
-    {
-        svcSleepThread(50 * 1000 * 1000LL);
-		if (!time0)
-			time0 = svcGetSystemTick;
-		time1 = svcGetSystemTick()
-		if(time1 - time0 > 3500){
-			screenshot_TakeScreenshot();
-			time0 = time1;
-		}
+    
+    svcSleepThread(50 * 1000 * 1000LL);
+	if (!time0)
+		time0 = svcGetSystemTick;
+	time1 = svcGetSystemTick();
+	if(time1 - time0 > 3500){
+		screenshot_TakeScreenshot();
+		time0 = time1;
+	}
 		
-    }
 }
 
 

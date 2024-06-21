@@ -120,19 +120,19 @@ void screenshot_TakeScreenshot(void)
 
     sprintf(filename, "screenshots/%s_top.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    TRY(RosalinaMenu_WriteScreenshot(&file, topWidth, true, true));
+    TRY(screenshot_WriteScreenshot(&file, topWidth, true, true));
     TRY(IFile_Close(&file));
 
     sprintf(filename, "screenshots/%s_bot.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    TRY(RosalinaMenu_WriteScreenshot(&file, bottomWidth, false, true));
+    TRY(screenshot_WriteScreenshot(&file, bottomWidth, false, true));
     TRY(IFile_Close(&file));
 
     if(is3d && (Draw_GetCurrentFramebufferAddress(true, true) != Draw_GetCurrentFramebufferAddress(true, false)))
     {
         sprintf(filename, "screenshots/%s_top_right.bmp", dateTimeStr);
         TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-        TRY(RosalinaMenu_WriteScreenshot(&file, topWidth, true, false));
+        TRY(screenshot_WriteScreenshot(&file, topWidth, true, false));
         TRY(IFile_Close(&file));
     }
 

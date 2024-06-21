@@ -20,7 +20,7 @@ typedef struct MyThread {
 
 
 Result MyThread_Create(MyThread *t, void (*entrypoint)(void), void *stack, u32 stackSize, int prio, int affinity);
-Result MyThread_Join(MyThread *thread, s64 timeout_ns)
+Result MyThread_Join(MyThread *thread, s64 timeout_ns);
 MyThread *screenshotCreateThread(void);
 void MyThread_Exit(void);
 void handleShellOpened(void);
