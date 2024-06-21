@@ -19,9 +19,9 @@ typedef struct MyThread {
 } MyThread;
 
 
-Result MyThread_Create(MyThread *t, void (*entrypoint)(void *p), void *p, void *stack, u32 stackSize, int prio, int affinity);Result MyThread_Join(MyThread *thread, s64 timeout_ns);
+Result MyThread_Create(MyThread *t, void (*entrypoint)(void), void *stack, u32 stackSize, int prio, int affinity);
+Result MyThread_Join(MyThread *thread, s64 timeout_ns)
 MyThread *screenshotCreateThread(void);
-static void _thread_begin(void* arg);
 void MyThread_Exit(void);
 void handleShellOpened(void);
 void N3DSMenu_UpdateStatus(void);

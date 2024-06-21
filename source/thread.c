@@ -8,8 +8,8 @@
 // added TickCounter for timing between screenshots
 
 //current contents: a few thread helper functions, and screenshotThreadMain that takes screenshot every 3.5s
-#pragma once
 
+#include <stdio.h>
 #include <3ds.h>
 #include <3ds/types.h>
 #include "thread.h"
@@ -17,6 +17,8 @@
 #include "csvc.h"
 #include "screenshot.h"
 #include "ifile.h"
+#include "n3ds.h"
+#include "fmt.h"
 
 static MyThread screenshotThread;
 static u8 CTR_ALIGN(8) screenshotThreadStack[0x3000];
@@ -84,6 +86,7 @@ void handleShellOpened(void)
 //        forceAudioOutput(forceOp);
 }
 
+static s64 clkRate = 0, higherClkRate = 0, L2CacheEnabled = 0;
 void N3DSMenu_UpdateStatus(void)
 {
     svcGetSystemInfo(&clkRate, 0x10001, 0);

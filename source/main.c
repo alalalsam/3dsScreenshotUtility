@@ -42,13 +42,13 @@
 #include "service_manager.h"
 //#include "errdisp.h"
 #include "utils.h"
-//#include "sleep.h"
+#include "sleep.h"
 //#include "MyThread.h"
 //#include "menus/miscellaneous.h"
 //#include "menus/debugger.h"
 //#include "menus/screen_filters.h"
 //#include "menus/cheats.h"
-//#include "menus/sysconfig.h"
+//#include "sysconfig.h"
 //#include "input_redirection.h"
 #include "minisoc.h"
 #include "draw.h"
@@ -203,15 +203,15 @@ static void handlePreTermNotification(u32 notificationId)
     InputRedirection_Disable(100 * 1000 * 1000LL);
 
     // Ask the debugger to terminate in approx 2 * 100ms
-    debuggerDisable(100 * 1000 * 1000LL);
+    //debuggerDisable(100 * 1000 * 1000LL);
 
     // Kill the ac session if needed
-    if(isConnectionForced)
-    {
-        acExit();
-        isConnectionForced = false;
-        SysConfigMenu_UpdateStatus(true);
-    }
+    //if(isConnectionForced)
+    //{
+    //    acExit();
+    //    isConnectionForced = false;
+    //    SysConfigMenu_UpdateStatus(true);
+    //}
 
     Draw_Lock();
     if (isHidInitialized)
@@ -267,7 +267,7 @@ static const ServiceManagerNotificationEntry notifications[] = {
 // Some changes to commit
 int main(void)
 {
-    Sleep__Init();
+
 
     if(R_FAILED(svcCreateEvent(&preTerminationEvent, RESET_STICKY)))
         svcBreak(USERBREAK_ASSERT);
