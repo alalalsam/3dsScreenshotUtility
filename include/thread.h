@@ -1,4 +1,5 @@
 //made by alalalsam
+#pragma once
 
 #include <3ds/types.h>
 #include <3ds/result.h>
@@ -7,6 +8,7 @@
 
 
 #define THREAD_STACK_SIZE 0x1000
+#define CORE_SYSTEM 	  1
 
 typedef struct MyThread {
     Handle handle;
@@ -16,11 +18,12 @@ typedef struct MyThread {
     void* stacktop;
 } MyThread;
 
-void _thread_begin(void);
-void MyThread_Create(void);
-void MyThread_Join(void);
+
+Result MyThread_Create(MyThread *t, void (*entrypoint)(void *p), void *p, void *stack, u32 stackSize, int prio, int affinity);Result MyThread_Join(MyThread *thread, s64 timeout_ns);
+MyThread *screenshotCreateThread(void);
+static void _thread_begin(void* arg);
 void MyThread_Exit(void);
-void screenshotCreateThread(void);
 void handleShellOpened(void);
 void N3DSMenu_UpdateStatus(void);
 void screenshotThreadMain(void);
+

@@ -8,15 +8,17 @@
 // added TickCounter for timing between screenshots
 
 //current contents: a few thread helper functions, and screenshotThreadMain that takes screenshot every 3.5s
+#pragma once
 
 #include <3ds.h>
 #include <3ds/types.h>
-#include "types.h"
 #include "thread.h"
 #include "utils.h"
 #include "csvc.h"
 #include "screenshot.h"
+#include "ifile.h"
 
+static MyThread screenshotThread;
 static u8 CTR_ALIGN(8) screenshotThreadStack[0x3000];
 
 
@@ -27,10 +29,9 @@ static void _thread_begin(void* arg)
     MyThread_Exit();
 }
 
-Result MyThread_Create(MyThread *t, void (*entrypoint)(void *p), void *p, void *stack, u32 stackSize, int prio, int affinity)
+Result MyThread_Create(MyThread *t, void (*entrypoint)(void), void *stack, u32 stackSize, int prio, int affinity)
 {
     t->ep       = entrypoint;
-    t->p        = p;
     t->stacktop = (u8 *)stack + stackSize;
 
     return svcCreateThread(&t->handle, _thread_begin, (u32)t, (u32*)t->stacktop, prio, affinity);
@@ -70,7 +71,7 @@ void handleShellOpened(void)
     s64 out = 0;
     svcGetSystemInfo(&out, 0x10000, 4);
     u32 multiConfig = (u32)out;
-    u32 forceOp = (multiConfig >> (2 * (u32)FORCEAUDIOOUTPUT)) & 3;
+//    u32 forceOp = (multiConfig >> (2 * (u32)FORCEAUDIOOUTPUT)) & 3;
 
     // We need to check here if GSP has done its init stuff, in particular
     // clock and reset, otherwise we'll cause core1 to be in a waitstate
@@ -79,8 +80,8 @@ void handleShellOpened(void)
     if (isServiceUsable("gsp::Gpu"))
         ScreenFiltersMenu_RestoreSettings();
 
-    if (forceOp != 0 && isServiceUsable("cdc:CHK"))
-        forceAudioOutput(forceOp);
+//    if (forceOp != 0 && isServiceUsable("cdc:CHK"))
+//        forceAudioOutput(forceOp);
 }
 
 void N3DSMenu_UpdateStatus(void)

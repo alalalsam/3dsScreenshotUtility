@@ -5,6 +5,7 @@
 #include <3ds/types.h>
 #include <3ds/gfx.h>
 #include "utils.h"
+#include "ifile.h"
 
-void screenshot_WriteScreenshot(void)
-void screenshot_TakeScreenshot(void)
+static Result screenshot_WriteScreenshot(IFile *file, u32 width, bool top, bool left);
+void screenshot_TakeScreenshot(void);

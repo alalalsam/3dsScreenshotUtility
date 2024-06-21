@@ -40,9 +40,9 @@
 //delete includes above this comment?
 #define KERNPA2VA(a)            ((a) + (GET_VERSION_MINOR(osGetKernelVersion()) < 44 ? 0xD0000000 : 0xC0000000))
 
+#include <3ds.h>
 #include <3ds/types.h>
 #include "fmt.h"
-#include <3ds.h>
 #include "draw.h"
 #include "csvc.h"
 

@@ -37,24 +37,25 @@
 */
 
 #include <3ds.h>
-#include "memory.h"
-#include "menu.h"
+//#include "memory.h"
+//#include "menu.h"
 #include "service_manager.h"
-#include "errdisp.h"
+//#include "errdisp.h"
 #include "utils.h"
-#include "sleep.h"
-#include "MyThread.h"
-#include "menus/miscellaneous.h"
-#include "menus/debugger.h"
-#include "menus/screen_filters.h"
-#include "menus/cheats.h"
-#include "menus/sysconfig.h"
-#include "input_redirection.h"
+//#include "sleep.h"
+//#include "MyThread.h"
+//#include "menus/miscellaneous.h"
+//#include "menus/debugger.h"
+//#include "menus/screen_filters.h"
+//#include "menus/cheats.h"
+//#include "menus/sysconfig.h"
+//#include "input_redirection.h"
 #include "minisoc.h"
 #include "draw.h"
-#include "bootdiag.h"
-#include "shell.h"
-
+//#include "bootdiag.h"
+//#include "shell.h"
+#include "thread.h"
+#include "plgloader.h"
 
 
 bool isN3DS;
@@ -97,7 +98,7 @@ void initSystem(void)
 
 
     svcGetSystemInfo(&out, 0x10000, 0x103);
-    lastNtpTzOffset = (s16)out;
+    //lastNtpTzOffset = (s16)out;
 
     for(res = 0xD88007FA; res == (Result)0xD88007FA; svcSleepThread(500 * 1000LL))
     {
@@ -133,6 +134,7 @@ void initSystem(void)
     srvSetBlockingPolicy(true); // GetServiceHandle nonblocking if service port is full
 }
 
+bool menuShouldExit = false;
 bool preTerminationRequested = false;
 Handle preTerminationEvent;
 
@@ -140,6 +142,7 @@ static void handleTermNotification(u32 notificationId)
 {
     (void)notificationId;
 }
+
 
 static void handleSleepNotification(u32 notificationId)
 {
@@ -167,6 +170,7 @@ static void handleSleepNotification(u32 notificationId)
     ptmSysmExit();
 }
 
+
 static void handleShellNotification(u32 notificationId)
 {
     // Quick dirty fix
@@ -186,6 +190,8 @@ static void handleShellNotification(u32 notificationId)
 
 }
 
+bool isConnectionForced = false;
+bool isHidInitialized = false;
 static void handlePreTermNotification(u32 notificationId)
 {
     (void)notificationId;
@@ -218,12 +224,15 @@ static void handlePreTermNotification(u32 notificationId)
     Draw_Unlock();
 }
 
+
+/*
 static void handleNextApplicationDebuggedByForce(u32 notificationId)
 {
     (void)notificationId;
     // Following call needs to be async because pm -> Loader depends on rosalina hb:ldr, handled in this very thread.
     TaskRunner_RunTask(debuggerFetchAndSetNextApplicationDebugHandleTask, NULL, 0);
 }
+*/
 
 #if 0
 static void handleRestartHbAppNotification(u32 notificationId)
@@ -249,7 +258,7 @@ static const ServiceManagerNotificationEntry notifications[] = {
     { PTMNOTIFID_HALF_AWAKE,        handleSleepNotification                 },
     { 0x213,                        handleShellNotification                 },
     { 0x214,                        handleShellNotification                 },
-    { 0x1000,                       handleNextApplicationDebuggedByForce    },
+    { 0x1000,                       NULL   									},
     { 0x2000,                       handlePreTermNotification               },
     { 0x1001,                       PluginLoader__HandleKernelEvent         },
     { 0x000, NULL },

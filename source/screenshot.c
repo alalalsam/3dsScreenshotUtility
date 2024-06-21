@@ -8,22 +8,22 @@
 
 //current contents: functions which, when called, should take screenshot and save to root/screenshots in SD
 
-#include "menus.h"
-#include "menu.h"
+//#include "menus.h"
+//#include "menu.h"
 
-#include "menus/process_list.h"
-#include "menus/n3ds.h"
-#include "menus/debugger.h"
-#include "menus/miscellaneous.h"
-#include "menus/sysconfig.h"
-#include "menus/screen_filters.h"
-#include "plugin.h"
+//#include "menus/process_list.h"
+//#include "menus/n3ds.h"
+//#include "menus/debugger.h"
+//#include "menus/miscellaneous.h"
+//#include "menus/sysconfig.h"
+//#include "menus/screen_filters.h"
+//#include "plugin.h"
 
 //delete includes above this comment?
 
-#include "process_patches.h"
-#include "luminance.h"
-#include "luma_config.h"
+//#include "process_patches.h"
+//#include "luminance.h"
+//#include "luma_config.h"
 #include "draw.h"
 #include "memory.h"
 #include <3ds.h>
