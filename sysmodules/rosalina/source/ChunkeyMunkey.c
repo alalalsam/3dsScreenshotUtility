@@ -18,11 +18,51 @@
 static MyThread chunkeyMunkeyThread;
 static u8 CTR_ALIGN(8) chunkeyMunkeyThreadStack[0x3000];
 
-MyThread *chunkeyMunkeyCreateThread(void)
+
+#define TRY(expr) if(R_FAILED(res = (expr))) goto end;
+
+static s64 timeSpentConvertingScreenshot = 0;
+static s64 timeSpentWritingScreenshot = 0;
+
+static Result chunkeyMunkey_WriteScreenshot(IFile *file, u32 width, bool top, bool left)
 {
-    if(R_FAILED(MyThread_Create(&chunkeyMunkeyThread, chunkeyMunkeyThreadMain, chunkeyMunkeyThreadStack, 0x3000, 52, CORE_SYSTEM)))
-        svcBreak(USERBREAK_PANIC);
-    return &menuThread;
+    u64 total;
+    Result res = 0;
+    u32 lineSize = 3 * width;
+    u32 remaining = lineSize * 240;
+
+    TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
+
+    u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
+    u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
+
+    u8 *buf = framebufferCache;
+    Draw_CreateBitmapHeader(framebufferCache, width, 240);
+    buf += 54;
+
+    u32 y = 0;
+    // Our buffer might be smaller than the size of the screenshot...
+    while (remaining != 0)
+    {
+        s64 t0 = svcGetSystemTick();
+        u32 available = (u32)(framebufferCacheEnd - buf);
+        u32 size = available < remaining ? available : remaining;
+        u32 nlines = size / lineSize;
+        Draw_ConvertFrameBufferLines(buf, width, y, nlines, top, left);
+
+        s64 t1 = svcGetSystemTick();
+        timeSpentConvertingScreenshot += t1 - t0;
+        TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
+        timeSpentWritingScreenshot += svcGetSystemTick() - t1;
+
+        y += nlines;
+        remaining -= lineSize * nlines;
+        buf = framebufferCache;
+    }
+    end:
+
+    Draw_FreeFramebufferCache();
+    return res;
 }
 
 
@@ -69,19 +109,19 @@ void chunkeyMunkey_TakeScreenshot(void)
 
     sprintf(filename, "/luma/screenshots/%s_top.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    TRY(RosalinaMenu_WriteScreenshot(&file, topWidth, true, true));
+    TRY(chunkeyMunkey_WriteScreenshot(&file, topWidth, true, true));
     TRY(IFile_Close(&file));
 
     sprintf(filename, "/luma/screenshots/%s_bot.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    TRY(RosalinaMenu_WriteScreenshot(&file, bottomWidth, false, true));
+    TRY(chunkeyMunkey_WriteScreenshot(&file, bottomWidth, false, true));
     TRY(IFile_Close(&file));
 
     if(is3d && (Draw_GetCurrentFramebufferAddress(true, true) != Draw_GetCurrentFramebufferAddress(true, false)))
     {
         sprintf(filename, "/luma/screenshots/%s_top_right.bmp", dateTimeStr);
         TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-        TRY(RosalinaMenu_WriteScreenshot(&file, topWidth, true, false));
+        TRY(chunkeyMunkey_WriteScreenshot(&file, topWidth, true, false));
         TRY(IFile_Close(&file));
     }
 
@@ -104,13 +144,13 @@ u32 t0 = 0;
 u32 t1 = 0;
 void chunkeyMunkeyThreadMain(void)
 {
+    handleShellOpened();
     if(isN3DS)
         N3DSMenu_UpdateStatus();
 
     while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
         svcSleepThread(250 * 1000 * 1000LL);
 
-    handleShellOpened();
 
     hidInit(); // assume this doesn't fail
     isHidInitialized = true;
@@ -118,7 +158,7 @@ void chunkeyMunkeyThreadMain(void)
     while(!preTerminationRequested)
     {
         svcSleepThread(50 * 1000 * 1000LL);
-		t1 = scvGetSystemTick();
+		t1 = svcGetSystemTick();
         if (t1-t0 < 500000)
             continue;
 		
@@ -126,4 +166,12 @@ void chunkeyMunkeyThreadMain(void)
 		chunkeyMunkey_TakeScreenshot();
 		
     }
+}
+
+
+MyThread *chunkeyMunkeyCreateThread(void)
+{
+    if(R_FAILED(MyThread_Create(&chunkeyMunkeyThread, chunkeyMunkeyThreadMain, chunkeyMunkeyThreadStack, 0x3000, 52, CORE_SYSTEM)))
+        svcBreak(USERBREAK_PANIC);
+    return &chunkeyMunkeyThread;
 }

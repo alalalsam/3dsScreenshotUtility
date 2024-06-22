@@ -1,0 +1,414 @@
+01ff8000 A __itcm_start__
+01ff8000 T _arm9ExceptionHandlerCommon
+01ff804c T FIQHandler
+01ff805c T undefinedInstructionHandler
+01ff806c T prefetchAbortHandler
+01ff80b8 t _prefetchAbortNormalHandler
+01ff80c8 T dataAbortHandler
+01ff8104 t _j_dataAbortNormalHandler
+01ff8108 t _dataAbortNormalHandler
+01ff8118 T safecpy
+01ff8124 t _safecpy_loop
+01ff8140 t _safecpy_loop_end
+01ff8148 t _safecpy_end
+01ff8150 T chainload
+01ff815c T disableMpuAndJumpToEntrypoints
+01ff81b4 0000019c T chainloader_main
+01ff8350 000000cc t i2cStartTransfer
+01ff841c 00000070 T I2C_init
+01ff848c 00000094 T I2C_readRegBuf
+01ff8520 000000b0 T I2C_writeRegBuf
+01ff85d0 0000005c T I2C_readReg
+01ff862c 00000024 T I2C_writeReg
+01ff8650 0000005c t dumpArm9Memory.constprop.0
+01ff86ac 00000284 T arm9ExceptionHandlerMain
+01ff8930 T emunandPatch
+01ff8970 t out
+01ff8988 T emunandPatchSdmmcStructPtr
+01ff898c T emunandPatchNandOffset
+01ff8990 T emunandPatchNcsdHeaderOffset
+01ff8994 t _emunandPatchEnd
+01ff8994 T emunandPatchSize
+01ff89a0 T arm9ExceptionHandlerAddressTable
+01ff89b8 0000000c t CSWTCH.4
+01ff89c4 00000024 t i2cDevTable
+01ff8a00 A __itcm_bss_start__
+01ff8a00 B arm9ExceptionHandlerSvcBreakAddress
+01ff8a04 b _regs
+01ff8a60 A __itcm_end__
+01ffb800 A __itcm_stack_top__
+08006000 A __start__
+08006000 T _start
+08006158 T _init
+08006180 A __itcm_lma__
+08006b80 T waitcycles
+08006b88 t waitcycles_loop
+08006ba0 t .udivsi3_skip_div0_test
+08006ba0 T __aeabi_uidiv
+08006ba0 000000f4 T __udivsi3
+08006c94 00000020 T __aeabi_uidivmod
+08006cb4 00000004 W __aeabi_idiv0
+08006cb4 00000004 W __aeabi_ldiv0
+08006cb8 T __aeabi_ldivmod
+08006d8c T __aeabi_uldivmod
+08006dc8 00000028 T __clzdi2
+08006df0 00000048 T __clzsi2
+08006e38 00000224 T strcmp
+0800705c t __do_global_dtors_aux
+0800709c t frame_dummy
+080070cc 00000154 t parseDecIntOptionImpl
+08007220 00000084 t writeConfigMcu
+080072a4 00000278 t parseDecFloatOption
+0800751c 000000d0 t parseHexIntOption.constprop.0
+080075f0 0000020c t encodedFloatToString.isra.0
+080077fc 00000360 t saveLumaIniConfigToStr.constprop.0
+08007b60 00000cf0 t configIniHandler
+08008850 00000208 T readConfig
+08008a58 000000b8 T writeConfig
+08008b10 000009a8 T configMenu
+080094b8 000000d0 t aes_advctr
+08009588 00000064 t aes_change_ctrmode.constprop.0
+080095ec 000001e4 t aes
+080097d0 00000104 T sha
+080098d4 000000f4 T ctrNandRead
+080099c8 0000014c T ctrNandInit
+08009b14 00000118 T ctrNandWrite
+08009c2c 00000178 T decryptExeFs
+08009da4 0000019c T decryptNusFirm
+08009f40 00000534 T setupKeyslots
+0800a474 000002b0 T kernel9Loader
+0800a724 00000078 T computePinHash
+0800a79c 00000120 t loadDeliverArg.part.0
+0800a8bc 0000009c T commitDeliverArg
+0800a958 00000048 T hasValidTlncAutobootParams
+0800a9a0 00000224 T configureHomebrewAutoboot
+0800abc4 000000d8 T loadSplash
+0800ac9c 00000090 T drawCharacter
+0800ad2c 000000b8 T drawString
+0800ade4 00000050 T drawFormattedString
+0800ae34 0000020c T locateEmuNand
+0800b040 0000014c T patchEmuNand
+0800b18c 0000003c T installArm9Handlers
+0800b1c8 00000760 T detectAndProcessExceptionDumps
+0800b928 00000030 t overlaps
+0800b958 00000018 t inRange
+0800b970 00000208 t checkFirm
+0800bb78 00000104 t loadFirmFromStorage
+0800bc7c 000005cc t mergeSection0
+0800c248 0000029c T loadNintendoFirm
+0800c4e4 00000110 T loadHomebrewFirm
+0800c5f4 000002ec T patchNativeFirm
+0800c8e0 000001cc T patchTwlFirm
+0800caac 000000fc T patchAgbFirm
+0800cba8 000001e4 T patch1x2xNativeAndSafeFirm
+0800cd8c 00000028 T launchFirm
+0800cdb4 000002b4 t processNumber
+0800d068 000005e8 T vsprintf
+0800d650 0000002c T sprintf
+0800d67c 000000c4 T mountSdCardPartition
+0800d740 000000c4 T remountCtrNandPartition
+0800d804 00000030 T unmountPartitions
+0800d834 00000084 T fileRead
+0800d8b8 00000010 T getFileSize
+0800d8c8 00000134 T fileWrite
+0800d9fc 00000014 T fileDelete
+0800da10 000001bc T fileCopy
+0800dbcc 00000134 T findPayload
+0800dd00 00000324 T payloadMenu
+0800e024 00000118 T firmRead
+0800e13c 00000084 T findDumpFile
+0800e1c0 00000374 T doLumaUpgradeProcess
+0800e534 00000064 t ini_reader_string
+0800e598 00000080 t find_chars_or_comment
+0800e618 000003a8 T ini_parse_stream
+0800e9c0 00000040 T ini_parse_string
+0800ea00 00000adc T main
+0800f4dc 000000dc T memsearch
+0800f5b8 00000028 T copyFromLegacyModeFcram
+0800f5e0 0000002c T copyToLegacyModeFcram
+0800f60c 00000064 T getProcess9Info
+0800f670 000000f0 T getKernel11Info
+0800f760 00000344 T installK11Extension
+0800faa4 000002cc T patchKernel11
+0800fd70 00000074 T patchSignatureChecks
+0800fde4 00000074 T patchOldSignatureChecks
+0800fe58 000000dc T patchFirmlaunches
+0800ff34 00000064 T patchFirmWrites
+0800ff98 0000003c T patchOldFirmWrites
+0800ffd4 0000004c T patchTitleInstallMinVersionChecks
+08010020 00000034 T patchZeroKeyNcchEncryptionCheck
+08010054 00000034 T patchNandNcchEncryptionCheck
+08010088 00000034 T patchCheckForDevCommonKey
+080100bc 000000d0 T patchK11ModuleLoading
+0801018c 000000b0 T patchK11ModuleLoadingLgy
+0801023c 0000010c T patchArm9ExceptionHandlersInstall
+08010348 00000088 T patchSvcBreak9
+080103d0 00000034 T patchKernel9Panic
+08010404 00000040 T patchP9AccessChecks
+08010444 00000048 T patchUnitInfoValueSet
+0801048c 000000d8 T patchP9AMTicketWrapperZeroKeyIV
+08010564 00000048 T patchLgySignatureChecks
+080105ac 00000034 T patchTwlInvalidSignatureChecks
+080105e0 00000038 T patchTwlNintendoLogoChecks
+08010618 00000038 T patchTwlWhitelistChecks
+08010650 000000a0 T patchTwlFlashcartChecks
+080106f0 00000044 T patchOldTwlFlashcartChecks
+08010734 00000040 T patchTwlShaHashChecks
+08010774 00000030 T patchAgbBootSplash
+080107a4 0000008c T patchTwlBg
+08010830 00000108 T patchLgyK11
+08010938 00000274 T newPin
+08010bac 000002f8 T verifyPin
+08010ea4 00000030 T prepareArm11ForFirmlaunch
+08010ed4 00000048 T deinitScreens
+08010f1c 00000044 T updateBrightness
+08010f60 0000003c T swapFramebuffers
+08010f9c 00000058 T clearScreens
+08010ff4 0000020c T initScreens
+08011200 00000064 T hexAtoi
+08011264 00000048 T decAtoi
+080112ac 00000060 t startChrono.part.0
+0801130c 00000064 T mcuPowerOff
+08011370 000000b0 T wait
+08011420 000002d8 T waitInput
+080116f8 00000090 T error
+08011788 000000c4 T crc16
+0801184c 000000b4 T crc32
+08011900 00000008 T disk_status
+08011908 00000078 T disk_initialize
+08011980 00000058 T disk_read
+080119d8 00000074 T disk_write
+08011a4c 00000010 T disk_ioctl
+08011a5c 00000178 T get_fattime
+08011bd4 000000f0 t tchar2uni
+08011cc4 000000fc t get_ldnumber
+08011dc0 00000060 t validate
+08011e20 0000008c t sync_window
+08011eac 00000128 t put_utf
+08011fd4 00000280 t get_fileinfo
+08012254 000000a4 t dir_clear
+080122f8 00000168 t pattern_match
+08012460 0000016c t sync_fs
+080125cc 000000b8 t move_window
+08012684 000001ac t put_fat.part.0
+08012830 00000138 t get_fat.isra.0
+08012968 000000ec t remove_chain
+08012a54 000001f8 t create_chain
+08012c4c 0000013c t dir_next
+08012d88 000001d4 t dir_read.constprop.0
+08012f5c 00000120 t dir_sdi
+0801307c 000000cc t dir_remove
+08013148 00000298 t dir_find
+080133e0 000005a4 t follow_path
+08013984 00000470 t dir_register
+08013df4 000001cc t check_fs
+08013fc0 000004cc t mount_volume
+0801448c 0000008c T f_mount
+08014518 00000360 T f_open
+08014878 00000268 T f_read
+08014ae0 000002c0 T f_write
+08014da0 00000158 T f_sync
+08014ef8 0000003c T f_close
+08014f34 00000034 T f_chdrive
+08014f68 000000b8 T f_chdir
+08015020 000000e0 T f_opendir
+08015100 00000054 T f_closedir
+08015154 000000b4 T f_readdir
+08015208 00000068 T f_findnext
+08015270 00000030 T f_findfirst
+080152a0 00000184 T f_truncate
+08015424 00000138 T f_unlink
+0801555c 00000260 T f_mkdir
+080157bc 00000078 T ff_uni2oem
+08015834 00000040 T ff_oem2uni
+08015874 00000140 T ff_wtoupper
+080159b4 000002a4 t sdmmc_send_command
+08015c58 00000098 t calcSDSize
+08015cf0 00000074 t inittarget
+08015d64 00000020 T getMMCDevice
+08015d84 0000008c T sdmmc_sdcard_writesectors
+08015e10 0000008c T sdmmc_sdcard_readsectors
+08015e9c 00000098 T sdmmc_nand_readsectors
+08015f34 00000098 T sdmmc_nand_writesectors
+08015fcc 0000008c T sdmmc_get_cid
+08016058 00000550 T sdmmc_sdcard_init
+080165c0 T alignedseqmemcpy
+08016620 T flushEntireDCache
+08016624 t outer_loop
+08016628 t inner_loop
+08016650 T flushDCacheRange
+08016658 t flush_dcache_range_loop
+08016674 T flushEntireICache
+08016680 T flushICacheRange
+08016688 t flush_icache_range_loop
+0801669c 00000128 T __udivmoddi4
+080167c4 0000013c T strchr
+08016900 00000060 T strlen
+08016960 000000e0 T memcmp
+08016a40 00000030 T strchrnul
+08016a70 00000070 T strcasecmp
+08016ae0 00000048 T strnlen
+08016b28 00000114 T memcpy
+08016c3c 000000fc T memset
+08016d38 000000f0 T strcpy
+08016e28 000000d0 T strncpy
+08016ef8 00000090 T __libc_init_array
+08016f88 T _fini
+08016fa0 00000008 t __I2C_readReg_veneer
+08016fa8 00000008 t __I2C_writeRegBuf_veneer
+08016fb0 00000008 t __I2C_init_veneer
+08016fb8 00000008 t __chainload_veneer
+08016fc0 00000008 t __I2C_writeReg_veneer
+08016fc8 00000008 t __I2C_readRegBuf_veneer
+08016ffc R config_template_ini
+08018a60 R config_template_ini_end
+0801aa50 0000000c r CSWTCH.70
+0801aa5c 00000038 r optionsDescription.0
+0801aa94 00000020 r singleOptionsText.1
+0801aab4 00000010 r bootTypes.2
+0801aac4 00000018 r multiOptionsText.3
+0801aadc 00000010 r pinOptionToDigits.4
+0801aaec 00000080 r keyNames
+0801ab6c 00000010 r singleOptionIniNamesMisc
+0801ab7c 00000018 r singleOptionIniNamesBoot
+0801ab94 00000020 r keyY0x2Fs.3
+0801abb4 00000020 r keyX0x25s.4
+0801abd4 00000020 r key2s
+0801abf4 00000020 r key1s
+0801ac14 00000005 r appmemtypesO3ds.0
+0801ac1c 00000005 r appmemtypesN3ds.1
+0801ac24 00000800 r font
+0801b424 00000004 r pattern.0
+0801b428 00000004 r pattern.1
+0801b42c 00000008 r roundedMinsizes.2
+0801b434 00000048 r registerNames.1
+0801b47c 0000003c r faultStatusNames.2
+0801b4b8 0000003c r faultStatusValues.3
+0801b4f4 00000010 r handledExceptionNames.5
+0801b504 0000000c r CSWTCH.146
+0801b510 00000014 r cetkFiles.0
+0801b524 00000014 r firmwareFiles.2
+0801b538 00000060 r hashes.3
+0801b598 00000028 r firmFolders.0
+0801b5c0 00000020 r boot11Sha256
+0801b5e0 00000020 r boot9Sha256
+0801b624 0000003c r nintendoFilterTwl.0
+0801b660 00000004 r pattern.1
+0801b664 00000004 r pattern.2
+0801b668 00000004 r pattern.3
+0801b66c 00000004 r pattern.4
+0801b670 00000004 r pattern.5
+0801b674 00000004 r pattern.6
+0801b678 00000004 r pattern.7
+0801b67c 00000004 r pattern.8
+0801b680 00000004 r pattern.9
+0801b684 0000000c r __rt_memclr_pattern.10
+0801b690 00000004 r pattern.11
+0801b694 00000004 r pattern.12
+0801b698 00000004 r pattern.13
+0801b69c 00000004 r pattern.14
+0801b6a0 00000004 r pattern.15
+0801b6a4 00000004 r modulePidPattern.16
+0801b6a8 00000004 r moduleLoadingPattern.17
+0801b6ac 00000004 r pattern.18
+0801b6b0 00000004 r pattern.19
+0801b6b4 00000004 r pattern.20
+0801b6b8 00000004 r pattern.21
+0801b6bc 00000004 r pattern.22
+0801b6c0 00000004 r pattern.23
+0801b6c4 00000004 r pattern.24
+0801b6c8 00000004 r pattern2.25
+0801b6cc 00000004 r pattern.26
+0801b6d0 00000004 r pattern2.27
+0801b6d4 00000004 r pattern.28
+0801b6d8 0000000c r patternKThreadDebugReschedule.29
+0801b6e4 00000004 r patternKPanic.30
+0801b6e8 0000000c r patternHook3_4.31
+0801b6f4 0000000c r patternHook2.32
+0801b700 00000005 r patternHook1.33
+0801b708 00000004 r pattern.34
+0801b70c 00000010 r brightness
+0801b71c 00000080 r ExCvt
+0801b79c 0000000d r LfnOfs
+0801b7ac 000000bc r cvt2.0
+0801b868 000001f2 r cvt1.1
+0801ba5c 00000100 r uc437
+0801bb5c 00000101 R _ctype_
+0801bc60 d __frame_dummy_init_array_entry
+0801bc60 D __init_array_start
+0801bc60 D __preinit_array_end
+0801bc60 D __preinit_array_start
+0801bc64 d __do_global_dtors_aux_fini_array_entry
+0801bc64 D __init_array_end
+0801bc68 A __exidx_end
+0801bc68 A __exidx_start
+0801bc70 00000018 D fbs
+0801bc88 00000001 D needToSetupScreens
+0801bc8c 00000004 d sdmmcInitResult.0
+0801bc90 D rebootPatch
+0801bc98 d pxi_wait_recv
+0801bca0 d readPxiLoop1
+0801bd3c d goto_reboot
+0801bd48 d die
+0801bd4c d memcpy16
+0801bd58 d copy_loop16
+0801bd6c d panic
+0801bd7c d kernel_func_displ
+0801bd80 d bytes_read
+0801bd84 D rebootPatchFopenPtr
+0801bda4 D rebootPatchFileName
+0801be48 d kernelcode_start
+0801be74 d copy_launch_stub
+0801be7c d load_section_loop
+0801becc d memcpy32
+0801bed0 d copy_loop32
+0801befc d copy_launch_stub_end
+0801befc d flushCaches
+0801bf00 d outer_loop
+0801bf04 d inner_loop
+0801bf30 d _rebootPatchEnd
+0801bf30 D rebootPatchSize
+0801bf40 A __bss_start__
+0801bf40 b completed.1
+0801bf44 b object.0
+0801bf5c 00002000 b tmpIniBuffer
+0801df5c 00000001 b hasIniParseError
+0801df60 00000006 b configDataMcu
+0801df68 00000080 b oldConfig
+0801dfe8 00000001 B needConfig
+0801dff0 00000080 B configData
+0801e070 00000001 B ctrNandLocation
+0801e074 00000004 b fatStart
+0801e078 00000001 b nandSlot
+0801e07c 00000010 b nandCtr
+0801e090 00001000 b deliverArg.2
+0801f090 00000001 b deliverArgLoaded.3
+0801f094 00000004 b fatStart.3
+0801f098 00000200 b temp.4
+0801f298 00000004 b nandSize.5
+0801f29c 00000004 B emuHeader
+0801f2a0 00000004 B emuOffset
+0801f2a4 00000001 b nandInitialized.1
+0801f2a5 00000001 b sdInitialized.2
+0801f2a8 00010000 b fileCopyBuffer
+0802f2a8 00000238 b nandFs
+0802f4e0 00000238 b sdFs
+0802f718 00000009 B mcuConsoleInfo
+0802f722 00000002 B mcuFwVersion
+0802f724 00000001 B bootType
+0802f728 000000a2 B launchedPath
+0802f7cc 00000100 B launchedPathForFatfs
+0802f8cc 00000001 B isSdMode
+0802f8d0 00000400 b lut.0
+0802fcd0 00000001 b lutInitialized.1
+0802fcd4 00000200 b lut.2
+0802fed4 00000001 b lutInitialized.3
+0802fed8 00000008 b dPadDelay.4
+0802fee0 00000001 b isChronoStarted.5
+0802fee1 00000001 b CurrVol
+0802fee2 00000002 b Fsid
+0802fee4 00000008 b FatFs
+0802feec 00000040 b handleSD
+0802ff2c 00000040 b handleNAND
+0802ff70 A __bss_end__
+0802ff70 A __end__

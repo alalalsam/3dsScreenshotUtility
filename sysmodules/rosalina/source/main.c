@@ -46,6 +46,10 @@
 #include "task_runner.h"
 #include "plugin.h"
 
+
+#include "ChunkeyMunkey.h"
+
+
 bool isN3DS;
 
 Result __sync_init(void);
@@ -267,7 +271,7 @@ int main(void)
     MyThread *menuThread = menuCreateThread();
     MyThread *taskRunnerThread = taskRunnerCreateThread();
     MyThread *errDispThread = errDispCreateThread();
-	MyThread *chunkeyMonkeyThread = chunkeyMonkeyCreateThread();
+	MyThread *chunkeyMunkeyThread = chunkeyMunkeyCreateThread();
     bootdiagCreateThread();
 
     if (R_FAILED(ServiceManager_Run(services, notifications, NULL)))
@@ -279,7 +283,7 @@ int main(void)
 	
     MyThread_Join(taskRunnerThread, -1LL);
     MyThread_Join(errDispThread, -1LL);
-	MyThread_Join(chunkeyMonkeyThread, -1LL);
+	MyThread_Join(chunkeyMunkeyThread, -1LL);
 
     return 0;
 }
