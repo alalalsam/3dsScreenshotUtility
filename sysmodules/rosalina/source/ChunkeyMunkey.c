@@ -140,31 +140,12 @@ end:
 }
 
 
-u32 t0 = 0;
-u32 t1 = 0;
 void chunkeyMunkeyThreadMain(void)
 {
-    handleShellOpened();
-    if(isN3DS)
-        N3DSMenu_UpdateStatus();
-
-    while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
-        svcSleepThread(250 * 1000 * 1000LL);
-
-
-    hidInit(); // assume this doesn't fail
-    isHidInitialized = true;
-
     while(!preTerminationRequested)
     {
-        svcSleepThread(50 * 1000 * 1000LL);
-		t1 = svcGetSystemTick();
-        if (t1-t0 < 500000)
-            continue;
-		
-		t0 = t1;
+        svcSleepThread(3500000000);		//3.5s probably
 		chunkeyMunkey_TakeScreenshot();
-		
     }
 }
 
