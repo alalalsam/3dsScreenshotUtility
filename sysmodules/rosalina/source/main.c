@@ -47,7 +47,7 @@
 #include "plugin.h"
 
 
-#include "ChunkeyMunkey.h"
+#include "datasetCapture.h"
 
 
 bool isN3DS;
@@ -271,7 +271,7 @@ int main(void)
     MyThread *menuThread = menuCreateThread();
     MyThread *taskRunnerThread = taskRunnerCreateThread();
     MyThread *errDispThread = errDispCreateThread();
-	MyThread *chunkeyMunkeyThread = chunkeyMunkeyCreateThread();
+	MyThread *datasetCaptureThread = datasetCapture_CreateThread();
     bootdiagCreateThread();
 
     if (R_FAILED(ServiceManager_Run(services, notifications, NULL)))
@@ -283,7 +283,7 @@ int main(void)
 	
     MyThread_Join(taskRunnerThread, -1LL);
     MyThread_Join(errDispThread, -1LL);
-	MyThread_Join(chunkeyMunkeyThread, -1LL);
+	MyThread_Join(datasetCaptureThread, -1LL);
 
     return 0;
 }
