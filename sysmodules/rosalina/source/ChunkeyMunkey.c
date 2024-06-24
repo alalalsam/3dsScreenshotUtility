@@ -142,10 +142,28 @@ end:
 
 void chunkeyMunkeyThreadMain(void)
 {
-    while(!preTerminationRequested)
+	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
+        svcSleepThread(250 * 1000 * 1000LL);
+	
+	while(!preTerminationRequested)
     {
         svcSleepThread(3500000000);		//3.5s probably
+		Draw_Lock();
+		svcKernelSetState(0x10000, 2 | 1);
+        svcSleepThread(5 * 1000 * 100LL);
+        if (R_FAILED(Draw_AllocateFramebufferCache(FB_BOTTOM_SIZE)))
+        {
+            // Oops
+            svcKernelSetState(0x10000, 2 | 1);
+            svcSleepThread(5 * 1000 * 100LL);
+        }
+        else
+            Draw_SetupFramebuffer();
 		chunkeyMunkey_TakeScreenshot();
+		Draw_RestoreFramebuffer();
+        Draw_FreeFramebufferCache();
+        svcKernelSetState(0x10000, 2 | 1);
+		Draw_Unlock();
     }
 }
 
