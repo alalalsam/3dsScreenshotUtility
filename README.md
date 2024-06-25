@@ -5,7 +5,7 @@ This program is basically just normal Luma3DS, except it takes a screenshot ever
 based off of Luma3ds 13.1.1
 idk if it even works yet maybe I'm getting ahead of myself editing the readme.
 
-to use, download firmtool and the other program, add to path, and make using devkitPro.
+To use, download firmtool and makerom, add to path, and make using devkitPro.
 =======
 # Luma3DS
 
