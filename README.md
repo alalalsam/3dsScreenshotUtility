@@ -47,4 +47,4 @@ This software is licensed under the terms of the GPLv3. You can find a copy of t
 Files in the GDB stub are instead triple-licensed as MIT or "GPLv2 or any later version", in which case it's specified in the file header.
 
 By contributing to this repository, you agree to license your changes to the project's owners.
->>>>>>> cb0edd9 (updated chunkeyMunkey thread, still need to double check it works properly)
+
