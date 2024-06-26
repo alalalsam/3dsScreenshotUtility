@@ -1,20 +1,12 @@
 
 #include <3ds.h>
 #include <3ds/os.h>
-#include "menu.h"
 #include "draw.h"
 #include "fmt.h"
-#include "memory.h"
 #include "ifile.h"
-#include "menus.h"
 #include "utils.h"
-#include "luma_config.h"
-#include "menus/n3ds.h"
-#include "menus/cheats.h"
-#include "minisoc.h"
 #include "plugin.h"
-#include "menus/screen_filters.h"
-#include "shell.h"
+
 
 static MyThread datasetCaptureThread;
 static u8 CTR_ALIGN(8) datasetCaptureThreadStack[0x3000];
