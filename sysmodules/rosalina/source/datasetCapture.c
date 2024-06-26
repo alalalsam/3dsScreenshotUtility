@@ -6,23 +6,24 @@
 #include "ifile.h"
 #include "utils.h"
 #include "plugin.h"
+#include "menu.h"
 
 
 static MyThread datasetCaptureThread;
-static u8 CTR_ALIGN(8) datasetCaptureThreadStack[0x3000];
-
+static u8 CTR_ALIGN(8) datasetCaptureWriteThreadStack[0x3000];
+static u8 CTR_ALIGN(8) datasetCaptureConvertThreadStack[0x3000];
 
 #define TRY(expr) if(R_FAILED(res = (expr))) goto end;
 
 static s64 timeSpentConvertingScreenshot = 0;
 static s64 timeSpentWritingScreenshot = 0;
 
-static Result datasetCapture_WriteScreenshot(IFile *file, u32 width, bool top, bool left)
+static Result datasetCapture_ConvertScreenshot(IFile *file, u32 width, bool top, bool left)
 {
     u64 total;
     Result res = 0;
     u32 lineSize = 3 * width;
-    u32 remaining = lineSize * 240;
+    u32 remaining = lineSize * 480;
 
     TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
 
@@ -35,23 +36,41 @@ static Result datasetCapture_WriteScreenshot(IFile *file, u32 width, bool top, b
 
     u32 y = 0;
     // Our buffer might be smaller than the size of the screenshot...
-    while (remaining != 0)
+    while (remaining != 240)
     {
         s64 t0 = svcGetSystemTick();
         u32 available = (u32)(framebufferCacheEnd - buf);
         u32 size = available < remaining ? available : remaining;
         u32 nlines = size / lineSize;
-        Draw_ConvertFrameBufferLines(buf, width, y, nlines, top, left);
+        Draw_ConvertFrameBufferLines(buf, width, y, nlines, top, true);
 
         s64 t1 = svcGetSystemTick();
         timeSpentConvertingScreenshot += t1 - t0;
-        TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
-        timeSpentWritingScreenshot += svcGetSystemTick() - t1;
+        //TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
+        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
 
         y += nlines;
         remaining -= lineSize * nlines;
         buf = framebufferCache;
     }
+	
+	while (remaining != 0)
+	{
+		 s64 t0 = svcGetSystemTick();
+        u32 available = (u32)(framebufferCacheEnd - buf);
+        u32 size = available < remaining ? available : remaining;
+        u32 nlines = size / lineSize;
+        Draw_ConvertFrameBufferLines(buf, width, y, nlines, top, false);
+
+        s64 t1 = svcGetSystemTick();
+        timeSpentConvertingScreenshot += t1 - t0;
+        //TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
+        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
+
+        y += nlines;
+        remaining -= lineSize * nlines;
+        buf = framebufferCache;
+	}
     end:
 
     Draw_FreeFramebufferCache();
@@ -104,13 +123,11 @@ void datasetCapture_TakeScreenshot(void)
     TRY(datasetCapture_WriteScreenshot(&file, topWidth, true, true));
     TRY(IFile_Close(&file));
 
-    if(is3d && (Draw_GetCurrentFramebufferAddress(true, true) != Draw_GetCurrentFramebufferAddress(true, false)))
-    {
-        sprintf(filename, "/luma/screenshots/%s_top_right.bmp", dateTimeStr);
-        TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-        TRY(datasetCapture_WriteScreenshot(&file, topWidth, true, false));
-        TRY(IFile_Close(&file));
-    }
+    sprintf(filename, "/luma/screenshots/%s_top_right.bmp", dateTimeStr);
+    TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
+	TRY(datasetCapture_WriteScreenshot(&file, topWidth, true, false));
+	TRY(IFile_Close(&file));
+
 
 end:
     IFile_Close(&file);
@@ -140,10 +157,11 @@ void datasetCapture_ThreadMain(void)
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
         svcSleepThread(250 * 1000 * 1000LL);
 	
-	while(!preTerminationRequested)
+	while(!preTerminationRequested )			//only collects screenhsots at full 3d mode, for data consistency
     {
-        svcSleepThread(3500000000);		//3.5s 
-		if(SliderIsMax()){				//only collects screenhsots at full 3d mode, for consistency
+        if(SliderIsMax()){
+			svcSleepThread(3500000000);		//3.5s 
+
 			Draw_Lock();
 			svcKernelSetState(0x10000, 2 | 1);
 			svcSleepThread(5 * 1000 * 100LL);
@@ -155,19 +173,24 @@ void datasetCapture_ThreadMain(void)
 			}
 			else
 				Draw_SetupFramebuffer();
+			svcKernelSetState(0x10000, 2 | 1);
 			datasetCapture_TakeScreenshot();
 			Draw_RestoreFramebuffer();
 			Draw_FreeFramebufferCache();
-			svcKernelSetState(0x10000, 2 | 1);
 			Draw_Unlock();
 		}
+		
     }
 }
 
 
-MyThread *datasetCapture_CreateThread(void)
+MyThread *datasetCapture_CreateConvertThread(void)
 {
-    if(R_FAILED(MyThread_Create(&datasetCaptureThread, datasetCapture_ThreadMain, datasetCaptureThreadStack, 0x3000, 52, CORE_SYSTEM)))
+    if(R_FAILED(MyThread_Create(&datasetCaptureConvertThread, datasetCapture_ConvertThreadMain, datasetCaptureConvertThreadStack, 0x3000, 52, CORE_SYSTEM)))
         svcBreak(USERBREAK_PANIC);
-    return &datasetCaptureThread;
+    return &datasetCaptureConvertThread;
 }
+
+MyThread *datasetCapture_CreateWriteThread(void)
+{
+	if( R_FAILED(MyThread_Create(&datasetCaptureWriteThread
