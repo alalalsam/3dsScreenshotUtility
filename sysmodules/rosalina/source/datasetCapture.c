@@ -8,71 +8,51 @@
 #include "plugin.h"
 #include "menu.h"
 
-
-static MyThread datasetCaptureThread;
+static u32 *cacheL;
+static u32 *cacheR;
+static MyThread datasetCacheThread;
 static u8 CTR_ALIGN(8) datasetCaptureWriteThreadStack[0x3000];
-static u8 CTR_ALIGN(8) datasetCaptureConvertThreadStack[0x3000];
+static u8 CTR_ALIGN(8) datasetCaptureCacheThreadStack[0x3000];
 
 #define TRY(expr) if(R_FAILED(res = (expr))) goto end;
 
 static s64 timeSpentConvertingScreenshot = 0;
 static s64 timeSpentWritingScreenshot = 0;
 
-static Result datasetCapture_ConvertScreenshot(IFile *file, u32 width, bool top, bool left)
+
+
+
+static Result datasetCapture_CacheTopScreen(IFile *file, u32 width, bool top)
 {
     u64 total;
     Result res = 0;
-    u32 lineSize = 3 * width;
-    u32 remaining = lineSize * 480;
+    u32 lineSize = 3 * 400;
+    u32 remaining = lineSize * 240;
 
-    TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
+    TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining ));
 
     u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
     u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
-
-    u8 *buf = framebufferCache;
-    Draw_CreateBitmapHeader(framebufferCache, width, 240);
-    buf += 54;
-
-    u32 y = 0;
-    // Our buffer might be smaller than the size of the screenshot...
-    while (remaining != 240)
-    {
-        s64 t0 = svcGetSystemTick();
-        u32 available = (u32)(framebufferCacheEnd - buf);
-        u32 size = available < remaining ? available : remaining;
-        u32 nlines = size / lineSize;
-        Draw_ConvertFrameBufferLines(buf, width, y, nlines, top, true);
-
-        s64 t1 = svcGetSystemTick();
-        timeSpentConvertingScreenshot += t1 - t0;
-        //TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
-        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
-
-        y += nlines;
-        remaining -= lineSize * nlines;
-        buf = framebufferCache;
-    }
 	
-	while (remaining != 0)
-	{
-		 s64 t0 = svcGetSystemTick();
-        u32 available = (u32)(framebufferCacheEnd - buf);
-        u32 size = available < remaining ? available : remaining;
-        u32 nlines = size / lineSize;
-        Draw_ConvertFrameBufferLines(buf, width, y, nlines, top, false);
 
-        s64 t1 = svcGetSystemTick();
-        timeSpentConvertingScreenshot += t1 - t0;
-        //TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
-        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
+    u8 *bufL = framebufferCache;
+	u8 *bufR = framebufferCache;
+    Draw_CreateBitmapHeader(framebufferCache, 400, 240);
+    bufL += 54;
+	bufR += 54;
+	
+    u32 y = 0;
 
-        y += nlines;
-        remaining -= lineSize * nlines;
-        buf = framebufferCache;
-	}
-    end:
+    u32 available = (u32)(framebufferCacheEnd - bufL);
+    u32 size = available < remaining ? available : remaining;
+    u32 nlines = size / lineSize;
+    Draw_ConvertFrameBufferLines(bufL, 400, y, nlines, top, true);
+	Draw_ConvertFrameBufferLines(bufR, 400, y, nlines, top, false);
 
+    //TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the heade
+	cacheL = bufL;
+	cacheR = bufR;
+	
     Draw_FreeFramebufferCache();
     return res;
 }
@@ -157,13 +137,13 @@ void datasetCapture_ThreadMain(void)
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
         svcSleepThread(250 * 1000 * 1000LL);
 	
-	while(!preTerminationRequested )			//only collects screenhsots at full 3d mode, for data consistency
+	while(!preTerminationRequested )			
     {
-        if(SliderIsMax()){
+        if(SliderIsMax()){					//captures gameplay only at full 3d mode every
 			svcSleepThread(3500000000);		//3.5s 
 
 			Draw_Lock();
-			svcKernelSetState(0x10000, 2 | 1);
+			svcKernelSetState(0x10000, 2 | 1);		//idk why we do this
 			svcSleepThread(5 * 1000 * 100LL);
 			if (R_FAILED(Draw_AllocateFramebufferCache(FB_BOTTOM_SIZE)))
 			{
@@ -174,7 +154,7 @@ void datasetCapture_ThreadMain(void)
 			else
 				Draw_SetupFramebuffer();
 			svcKernelSetState(0x10000, 2 | 1);
-			datasetCapture_TakeScreenshot();
+			datasetCapture_CacheTopScreen();		//write to cacheL and cacheR variables
 			Draw_RestoreFramebuffer();
 			Draw_FreeFramebufferCache();
 			Draw_Unlock();
