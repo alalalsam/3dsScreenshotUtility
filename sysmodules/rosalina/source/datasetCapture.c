@@ -8,11 +8,13 @@
 #include "plugin.h"
 #include "menu.h"
 
-static u32 *cacheL;
-static u32 *cacheR;
-static MyThread datasetCacheThread;
-static u8 CTR_ALIGN(8) datasetCaptureWriteThreadStack[0x3000];
-static u8 CTR_ALIGN(8) datasetCaptureCacheThreadStack[0x3000];
+static u32 cacheL;
+static u32 cacheR;
+static MyThread CacheThread;
+static MyThread WriteThread;
+static u8 CTR_ALIGN(8) WriteThreadStack[0x3000];
+static u8 CTR_ALIGN(8) CacheThreadStack[0x3000];
+static u8 readyToWrite = 0;
 
 #define TRY(expr) if(R_FAILED(res = (expr))) goto end;
 
@@ -20,9 +22,33 @@ static s64 timeSpentConvertingScreenshot = 0;
 static s64 timeSpentWritingScreenshot = 0;
 
 
+static Result CacheToFile(IFile *file, bool left)
+{
+    u64 total;
+    Result res = 0;
+    u32 lineSize = 3 * 400;
+    u32 remaining = lineSize * 240;
+	u32 size = lineSize * remaining;
+	u32 y = 0;
+	
+    while (remaining != 0)
+    {
+        u32 nlines = size / lineSize;
+		if(left)
+			TRY(IFile_Write(file, &total, cacheL, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
+        else TRY(IFile_Write(file, &total, cacheR, (y == 0 ? 54 : 0) + lineSize * nlines, 0));
+		
+        y += nlines;
+        remaining -= lineSize * nlines;
+    }
+    end:
+    return res;	
+}
+	
+	
+	
 
-
-static Result datasetCapture_CacheTopScreen(IFile *file, u32 width, bool top)
+static Result CacheTopScreen(void)
 {
     u64 total;
     Result res = 0;
@@ -46,8 +72,8 @@ static Result datasetCapture_CacheTopScreen(IFile *file, u32 width, bool top)
     u32 available = (u32)(framebufferCacheEnd - bufL);
     u32 size = available < remaining ? available : remaining;
     u32 nlines = size / lineSize;
-    Draw_ConvertFrameBufferLines(bufL, 400, y, nlines, top, true);
-	Draw_ConvertFrameBufferLines(bufR, 400, y, nlines, top, false);
+    Draw_ConvertFrameBufferLines(bufL, 400, y, nlines, true, true);
+	Draw_ConvertFrameBufferLines(bufR, 400, y, nlines, true, false);
 
     //TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the heade
 	cacheL = bufL;
@@ -58,7 +84,7 @@ static Result datasetCapture_CacheTopScreen(IFile *file, u32 width, bool top)
 }
 
 
-void datasetCapture_TakeScreenshot(void)
+void createImageFiles(void)
 {
     IFile file;
     Result res = 0;
@@ -82,7 +108,7 @@ void datasetCapture_TakeScreenshot(void)
 
     svcFlushEntireDataCache();
 
-    bool is3d;
+    //bool is3d;
     u32 topWidth; // actually Y-dim
 
     Draw_GetCurrentScreenInfo(&topWidth, &is3d, true);
@@ -100,12 +126,12 @@ void datasetCapture_TakeScreenshot(void)
 
     sprintf(filename, "/luma/screenshots/%s_top.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    TRY(datasetCapture_WriteScreenshot(&file, topWidth, true, true));
+    TRY(CacheToFile(&file, true));
     TRY(IFile_Close(&file));
 
     sprintf(filename, "/luma/screenshots/%s_top_right.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-	TRY(datasetCapture_WriteScreenshot(&file, topWidth, true, false));
+	TRY(CacheToFile(&file, false));
 	TRY(IFile_Close(&file));
 
 
@@ -132,7 +158,7 @@ int SliderIsMax(void)
 }
 
 
-void datasetCapture_ThreadMain(void)
+void ScreenToCacheThreadMain(void)
 {
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
         svcSleepThread(250 * 1000 * 1000LL);
@@ -154,23 +180,44 @@ void datasetCapture_ThreadMain(void)
 			else
 				Draw_SetupFramebuffer();
 			svcKernelSetState(0x10000, 2 | 1);
-			datasetCapture_CacheTopScreen();		//write to cacheL and cacheR variables
+			CacheTopScreen();		//write to cacheL and cacheR variables
 			Draw_RestoreFramebuffer();
 			Draw_FreeFramebufferCache();
 			Draw_Unlock();
+			readyToWrite = 1;
 		}
 		
     }
 }
 
 
-MyThread *datasetCapture_CreateConvertThread(void)
+void CacheToFileThreadMain(void)
 {
-    if(R_FAILED(MyThread_Create(&datasetCaptureConvertThread, datasetCapture_ConvertThreadMain, datasetCaptureConvertThreadStack, 0x3000, 52, CORE_SYSTEM)))
+	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
+		svcSleepThread(250 * 1000 * 1000LL);
+	while(!preTerminationRequested )			
+    {
+		if (!readyToWrite)
+			continue
+		else
+			createImageFiles();
+		
+	}
+}
+
+//this thread uses syscore. writes cache to cacheR and cacheL every few seconds, then calls 2nd thread
+MyThread *datasetCapture_CreateCacheThread(void)
+{
+    if(R_FAILED(MyThread_Create(&CacheThread, ScreenToCacheThreadMain, CacheThreadStack, 0x3000, 52, CORE_SYSTEM)))
         svcBreak(USERBREAK_PANIC);
     return &datasetCaptureConvertThread;
 }
 
-MyThread *datasetCapture_CreateWriteThread(void)
+//uses new 3ds extra cpu core. writes cacheR and cacheL to file after called by other thread.
+MyThread *datasetCapture_CreateFileWriteThread(void)
 {
-	if( R_FAILED(MyThread_Create(&datasetCaptureWriteThread
+	if( R_FAILED(MyThread_Create(&WriteThread, CacheToFileThreadMain, WriteThreadStack, 0x3000, 52, 2)))
+		svcBreak(USERBREAK_PANIC);
+	return &datasetCaptureConvertThread;
+}
+
