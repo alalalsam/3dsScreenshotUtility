@@ -12,8 +12,8 @@ static u8 *cacheL;
 static u8 *cacheR;
 static MyThread CacheThread;
 static MyThread WriteThread;
-static u8 CTR_ALIGN(8) WriteThreadStack[0x3000];
-static u8 CTR_ALIGN(8) CacheThreadStack[0x3000];
+static u8 CTR_ALIGN(8) WriteThreadStack[0x2000];
+static u8 CTR_ALIGN(8) CacheThreadStack[0x2000];
 static u8 readyToWrite = 0;
 
 #define TRY(expr) if(R_FAILED(res = (expr))) goto end;
@@ -44,7 +44,7 @@ static Result CacheToFile(IFile *file, bool left)
 	
 
 
-static Result TopScreenToCache(void)
+void TopScreenToCache(void)
 {
     Result res = 0;
     u32 lineSize = 3 * 400;
@@ -76,7 +76,6 @@ static Result TopScreenToCache(void)
 	
 end:
     Draw_FreeFramebufferCache();
-    return res;
 }
 
 
@@ -162,11 +161,10 @@ void ScreenToCacheThreadMain(void)
 	
 	while(!preTerminationRequested )			
     {
+		svcSleepThread(3500000000);		//3.5s 
         if(SliderIsMax()){					//captures gameplay only at full 3d mode every
-			svcSleepThread(3500000000);		//3.5s 
-
 			Draw_Lock();
-			svcKernelSetState(0x10000, 2 | 1);		//idk why we do this
+			svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
 			svcSleepThread(5 * 1000 * 100LL);
 			if (R_FAILED(Draw_AllocateFramebufferCache(FB_BOTTOM_SIZE)))
 			{
@@ -180,8 +178,9 @@ void ScreenToCacheThreadMain(void)
 			TopScreenToCache();		//write to cacheL and cacheR variables
 			Draw_RestoreFramebuffer();
 			Draw_FreeFramebufferCache();
-			Draw_Unlock();
 			readyToWrite = 1;
+			Draw_Unlock();
+			
 		}
 		
     }
@@ -193,13 +192,16 @@ void CacheToFileThreadMain(void)
 {
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
 		svcSleepThread(250 * 1000 * 1000LL);
+	
 	while(!preTerminationRequested )			
-    {
+    {	
 		if (!readyToWrite)
 			continue;
 		else{
+			Draw_Lock();
 			createImageFiles();
 			readyToWrite = 0;
+			Draw_Unlock();
 		}
 	}
 }
@@ -209,7 +211,7 @@ void CacheToFileThreadMain(void)
 //this thread uses syscore. writes cache to cacheR and cacheL every few seconds, then calls 2nd thread
 MyThread *datasetCapture_CreateCacheThread(void)
 {
-    if(R_FAILED(MyThread_Create(&CacheThread, ScreenToCacheThreadMain, CacheThreadStack, 0x3000, 52, CORE_SYSTEM)))
+    if(R_FAILED(MyThread_Create(&CacheThread, ScreenToCacheThreadMain, CacheThreadStack, 0x2000, 52, CORE_SYSTEM)))
         svcBreak(USERBREAK_PANIC);
     return &CacheThread;
 }
@@ -219,7 +221,7 @@ MyThread *datasetCapture_CreateCacheThread(void)
 //uses new 3ds extra cpu core. writes cacheR and cacheL to file after called by other thread.
 MyThread *datasetCapture_CreateFileWriteThread(void)
 {
-	if( R_FAILED(MyThread_Create(&WriteThread, CacheToFileThreadMain, WriteThreadStack, 0x3000, 52, 2)))
+	if( R_FAILED(MyThread_Create(&WriteThread, CacheToFileThreadMain, WriteThreadStack, 0x2000, 52, 2)))
 		svcBreak(USERBREAK_PANIC);
 	return &WriteThread;
 }
