@@ -8,8 +8,8 @@
 #include "plugin.h"
 #include "menu.h"
 
-static u32 cacheL;
-static u32 cacheR;
+static u32 *cacheL;
+static u32 *cacheR;
 static MyThread CacheThread;
 static MyThread WriteThread;
 static u8 CTR_ALIGN(8) WriteThreadStack[0x3000];
@@ -34,9 +34,9 @@ static Result CacheToFile(IFile *file, bool left)
     while (remaining != 0)
     {
         u32 nlines = size / lineSize;
-		if(left)
+		if(left){
 			TRY(IFile_Write(file, &total, cacheL, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
-        else TRY(IFile_Write(file, &total, cacheR, (y == 0 ? 54 : 0) + lineSize * nlines, 0));
+		}else TRY(IFile_Write(file, &total, cacheR, (y == 0 ? 54 : 0) + lineSize * nlines, 0));
 		
         y += nlines;
         remaining -= lineSize * nlines;
