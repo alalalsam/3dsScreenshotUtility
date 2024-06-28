@@ -10,8 +10,8 @@
 
 
 int SliderIsMax(void);
-static Result CacheToFile(IFile *file, bool left);
-static Result CacheTopScreen(void);
+//static Result CacheToFile(IFile *file, bool left);
+//static Result TopScreenToCache(void);
 MyThread *datasetCapture_CreateCacheThread(void);
 MyThread *datasetCapture_CreateFileWriteThread(void);
 void createImageFiles(void);

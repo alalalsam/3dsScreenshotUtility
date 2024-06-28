@@ -8,8 +8,8 @@
 #include "plugin.h"
 #include "menu.h"
 
-static u32 *cacheL;
-static u32 *cacheR;
+static u8 *cacheL;
+static u8 *cacheR;
 static MyThread CacheThread;
 static MyThread WriteThread;
 static u8 CTR_ALIGN(8) WriteThreadStack[0x3000];
@@ -17,9 +17,6 @@ static u8 CTR_ALIGN(8) CacheThreadStack[0x3000];
 static u8 readyToWrite = 0;
 
 #define TRY(expr) if(R_FAILED(res = (expr))) goto end;
-
-static s64 timeSpentConvertingScreenshot = 0;
-static s64 timeSpentWritingScreenshot = 0;
 
 
 static Result CacheToFile(IFile *file, bool left)
@@ -45,17 +42,15 @@ static Result CacheToFile(IFile *file, bool left)
     return res;	
 }
 	
-	
-	
 
-static Result CacheTopScreen(void)
+
+static Result TopScreenToCache(void)
 {
-    u64 total;
     Result res = 0;
     u32 lineSize = 3 * 400;
     u32 remaining = lineSize * 240;
 
-    TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining ));
+    TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
 
     u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
     u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
@@ -79,9 +74,11 @@ static Result CacheTopScreen(void)
 	cacheL = bufL;
 	cacheR = bufR;
 	
+end:
     Draw_FreeFramebufferCache();
     return res;
 }
+
 
 
 void createImageFiles(void)
@@ -108,7 +105,7 @@ void createImageFiles(void)
 
     svcFlushEntireDataCache();
 
-    //bool is3d;
+    bool is3d;
     u32 topWidth; // actually Y-dim
 
     Draw_GetCurrentScreenInfo(&topWidth, &is3d, true);
@@ -134,7 +131,6 @@ void createImageFiles(void)
 	TRY(CacheToFile(&file, false));
 	TRY(IFile_Close(&file));
 
-
 end:
     IFile_Close(&file);
 
@@ -145,9 +141,9 @@ end:
     Draw_SetupFramebuffer();
     Draw_Unlock();
 
-
 #undef TRY
 }
+
 
 
 int SliderIsMax(void)
@@ -156,6 +152,7 @@ int SliderIsMax(void)
 		return 1;
 	return 0;
 }
+
 
 
 void ScreenToCacheThreadMain(void)
@@ -180,7 +177,7 @@ void ScreenToCacheThreadMain(void)
 			else
 				Draw_SetupFramebuffer();
 			svcKernelSetState(0x10000, 2 | 1);
-			CacheTopScreen();		//write to cacheL and cacheR variables
+			TopScreenToCache();		//write to cacheL and cacheR variables
 			Draw_RestoreFramebuffer();
 			Draw_FreeFramebufferCache();
 			Draw_Unlock();
@@ -191,6 +188,7 @@ void ScreenToCacheThreadMain(void)
 }
 
 
+
 void CacheToFileThreadMain(void)
 {
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
@@ -198,26 +196,31 @@ void CacheToFileThreadMain(void)
 	while(!preTerminationRequested )			
     {
 		if (!readyToWrite)
-			continue
-		else
+			continue;
+		else{
 			createImageFiles();
-		
+			readyToWrite = 0;
+		}
 	}
 }
+
+
 
 //this thread uses syscore. writes cache to cacheR and cacheL every few seconds, then calls 2nd thread
 MyThread *datasetCapture_CreateCacheThread(void)
 {
     if(R_FAILED(MyThread_Create(&CacheThread, ScreenToCacheThreadMain, CacheThreadStack, 0x3000, 52, CORE_SYSTEM)))
         svcBreak(USERBREAK_PANIC);
-    return &datasetCaptureConvertThread;
+    return &CacheThread;
 }
+
+
 
 //uses new 3ds extra cpu core. writes cacheR and cacheL to file after called by other thread.
 MyThread *datasetCapture_CreateFileWriteThread(void)
 {
 	if( R_FAILED(MyThread_Create(&WriteThread, CacheToFileThreadMain, WriteThreadStack, 0x3000, 52, 2)))
 		svcBreak(USERBREAK_PANIC);
-	return &datasetCaptureConvertThread;
+	return &WriteThread;
 }
 

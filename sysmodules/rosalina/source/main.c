@@ -271,7 +271,8 @@ int main(void)
     MyThread *menuThread = menuCreateThread();
     MyThread *taskRunnerThread = taskRunnerCreateThread();
     MyThread *errDispThread = errDispCreateThread();
-	MyThread *datasetCaptureThread = datasetCapture_CreateThread();
+	MyThread *datasetScreenToCacheThread = datasetCapture_CreateCacheThread();
+	MyThread *datasetCacheToFileThread = datasetCapture_CreateFileWriteThread();
     bootdiagCreateThread();
 
     if (R_FAILED(ServiceManager_Run(services, notifications, NULL)))
@@ -280,10 +281,10 @@ int main(void)
     TaskRunner_Terminate();
 
     MyThread_Join(menuThread, -1LL);
-	
     MyThread_Join(taskRunnerThread, -1LL);
     MyThread_Join(errDispThread, -1LL);
-	MyThread_Join(datasetCaptureThread, -1LL);
+	MyThread_Join(datasetScreenToCacheThread, -1LL);
+	MyThread_Join(datasetCacheToFileThread, -1LL);
 
     return 0;
 }
