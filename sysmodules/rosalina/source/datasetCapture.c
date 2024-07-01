@@ -12,7 +12,8 @@ static u32 topWidth;
 static bool is3d;
 
 //static u8 *topWidth;
-static u8 *framebufferCache;
+static u8 *LframebufferCache;
+static u8 *RframebufferCache;
 static u8 *framebufferCacheEnd;
 static MyThread CacheThread;
 static MyThread WriteThread;
@@ -27,27 +28,28 @@ static Result WriteR(IFile *file)
  u64 total;
     Result res = 0;
     u32 lineSize = 3 * 400;
-    u32 remaining = lineSize * 240 * 2;
+    u32 remaining = lineSize * 240 ;
 	
 	//Draw_FreeFramebufferCache();
 	
     //TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
 
     //u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
-    //u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
+    framebufferCacheEnd = RframebufferCache + Draw_GetFramebufferCacheSize();
 	//bool dummy = true;
-    u8 *buf = framebufferCache;
+    u8 *buf = RframebufferCache;
 
 	//u8 *header = framebufferCache;
 	
 	//u32 nlines = 480;
-    Draw_CreateBitmapHeader(framebufferCache, 400, 480);
+    //Draw_CreateBitmapHeader(RframebufferCache, 400, 240);
+	Draw_CreateBitmapHeader(RframebufferCache, 400, 240);
     buf += 54;									//header
 
-    u32 y = 0;
+    //u32 y = 0;
     // Our buffer might be smaller than the size of the screenshot...
-    while (remaining != 0)
-	{
+    //while (remaining != 180)
+	
         //s64 t0 = svcGetSystemTick();
         u32 available = (u32)(framebufferCacheEnd - buf);
         u32 size = available < remaining ? available : remaining;
@@ -63,14 +65,72 @@ static Result WriteR(IFile *file)
 
         //s64 t1 = svcGetSystemTick();
         //timeSpentConvertingScreenshot += t1 - t0;
-        TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize  * nlines, 0)); // don't forget to write the header
+        //TRY(IFile_Write(file, &total, LframebufferCache, 54  + lineSize  * nlines, 0)); // don't forget to write the header
+		TRY(IFile_Write(file, &total, RframebufferCache, 54 + lineSize  * nlines, 0)); // don't forget to write the header
 		//TRY(IFile_Write(file, &total, buf, lineSize * nlines, 0));
         //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
 
-        y += nlines;
-        remaining -= lineSize * nlines;
+        //y += nlines;
+        //remaining -= lineSize * nlines;
         //buf = framebufferCache;
-    }
+    
+	end:
+
+    //Draw_FreeFramebufferCache();
+    return res;
+}
+
+static Result WriteL(IFile *file)
+{
+ u64 total;
+    Result res = 0;
+    u32 lineSize = 3 * 400;
+    u32 remaining = lineSize * 240 ;
+	
+	//Draw_FreeFramebufferCache();
+	
+    //TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
+
+    //u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
+    framebufferCacheEnd = LframebufferCache + Draw_GetFramebufferCacheSize();
+	//bool dummy = true;
+    u8 *buf = LframebufferCache;
+
+	//u8 *header = framebufferCache;
+	
+	//u32 nlines = 480;
+    //Draw_CreateBitmapHeader(RframebufferCache, 400, 240);
+	Draw_CreateBitmapHeader(LframebufferCache, 400, 240);
+    buf += 54;									//header
+
+    //u32 y = 0;
+    // Our buffer might be smaller than the size of the screenshot...
+    //while (remaining != 180)
+	
+        //s64 t0 = svcGetSystemTick();
+        u32 available = (u32)(framebufferCacheEnd - buf);
+        u32 size = available < remaining ? available : remaining;
+        u32 nlines = size / lineSize;
+
+		//if(dummy){
+		//Draw_ConvertFrameBufferLines(buf, 400, y, nlines/2, true, false);
+		//framebufferCache = (u8 *)Draw_GetFramebufferCache();
+		//Draw_ConvertFrameBufferLines(buf, 400, y + 240, nlines/2, true, true);
+		//dummy = false;
+		//}
+
+
+        //s64 t1 = svcGetSystemTick();
+        //timeSpentConvertingScreenshot += t1 - t0;
+        TRY(IFile_Write(file, &total, LframebufferCache, 54  + lineSize  * nlines, 0)); // don't forget to write the header
+		//TRY(IFile_Write(Rfile, &total, RframebufferCache, (y == 0 ? 54 : 0) + lineSize  * nlines, 0)); // don't forget to write the header
+		//TRY(IFile_Write(file, &total, buf, lineSize * nlines, 0));
+        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
+
+        //y += nlines;
+        //remaining -= lineSize * nlines;
+        //buf = framebufferCache;
+    
 	end:
 
     //Draw_FreeFramebufferCache();
@@ -209,16 +269,17 @@ void createImageFiles(void)
     }
 
     dateTimeToString(dateTimeStr, osGetTime(), true);
+	
+	sprintf(filename, "/luma/screenshots/%s_L.bmp", dateTimeStr);
+    TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
+    TRY(WriteL(&file));
+    TRY(IFile_Close(&file));
 
     sprintf(filename, "/luma/screenshots/%s_R.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
     TRY(WriteR(&file));
     TRY(IFile_Close(&file));
 	
-	//sprintf(filename, "/luma/screenshots/%s_L.bmp", dateTimeStr);
-    //TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    //TRY(WriteL(&file));
-    //TRY(IFile_Close(&file));
 
 end:
     IFile_Close(&file);
@@ -258,30 +319,37 @@ void ScreenToCacheThreadMain(void)
 			svcSleepThread(5 * 1000 * 100LL);
 
 			//idk what im doing anymore
+			Draw_GetCurrentScreenInfo(&topWidth, &is3d, true);
 			
+			Draw_AllocateFramebufferCacheForScreenshot(3 * 400 * 240);	
 			
+
 			
+			RframebufferCache = (u8 *)Draw_GetFramebufferCache();
+			Draw_ConvertFrameBufferLines(RframebufferCache, 400, 0, 240 , true, false);
+			
+			LframebufferCache = (u8 *)Draw_GetFramebufferCache();
+			Draw_ConvertFrameBufferLines(LframebufferCache, 400, 0, 240, true, true);
+			
+			//framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
 			
 			//Draw_FreeFramebufferCache();
 
 			//svcFlushEntireDataCache();
 			
-			Draw_GetCurrentScreenInfo(&topWidth, &is3d, true);
 			
-			Draw_AllocateFramebufferCacheForScreenshot(3 * 400 * 240 *2);	
 			
-			framebufferCache = (u8 *)Draw_GetFramebufferCache();
 			
-			framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
 			
-			svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
-			svcSleepThread(5 * 1000 * 100LL);
-			
-			Draw_ConvertFrameBufferLines(framebufferCache, topWidth, 239, 240 , true, true);
-			
-			//Draw_ConvertFrameBufferLines(framebufferCache, topWidth, 0, 240, true, false);
 
 			
+			
+			
+			
+			
+
+			svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
+			svcSleepThread(5 * 1000 * 100LL);
 			
 			
 			//Draw_ConvertFrameBufferLines(bufR, 400, 0, 240, true, false);

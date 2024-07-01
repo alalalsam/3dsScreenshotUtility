@@ -354,6 +354,7 @@ typedef struct FrameBufferConvertArgs {
     bool left;
 } FrameBufferConvertArgs;
 
+
 static void Draw_ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
 {
     static const u8 formatSizes[] = { 4, 3, 2, 2, 2 };
