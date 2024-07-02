@@ -8,156 +8,146 @@
 #include "plugin.h"
 #include "menu.h"
 
-static u32 topWidth;
-static bool is3d;
-
-//static u8 *topWidth;
-static u8 *LframebufferCache;
-static u8 *RframebufferCache;
+static u8 *framebufferCache;
 static u8 *framebufferCacheEnd;
 static MyThread CacheThread;
 static MyThread WriteThread;
-static u8 CTR_ALIGN(8) WriteThreadStack[0x2000];
-static u8 CTR_ALIGN(8) CacheThreadStack[0x2000];
+static u8 CTR_ALIGN(8) WriteThreadStack[0x4000];
+static u8 CTR_ALIGN(8) CacheThreadStack[0x4000];
 volatile u8 readyToWrite = 0;
+
+#define KERNPA2VA(a)            ((a) + (GET_VERSION_MINOR(osGetKernelVersion()) < 44 ? 0xD0000000 : 0xC0000000))
 
 #define TRY(expr) if(R_FAILED(res = (expr))) goto end;
 
-static Result WriteR(IFile *file)
+static inline void ConvertPixelToBGR8(u8 *dst, const u8 *src, GSPGPU_FramebufferFormat srcFormat)
 {
- u64 total;
-    Result res = 0;
-    u32 lineSize = 3 * 400;
-    u32 remaining = lineSize * 240 ;
-	
-	//Draw_FreeFramebufferCache();
-	
-    //TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
+    u8 red, green, blue;
+    switch(srcFormat)
+    {
+        case GSP_RGBA8_OES:
+        {
+            u32 px = *(u32 *)src;
+            dst[0] = (px >>  8) & 0xFF;
+            dst[1] = (px >> 16) & 0xFF;
+            dst[2] = (px >> 24) & 0xFF;
+            break;
+        }
+        case GSP_BGR8_OES:
+        {
+            dst[2] = src[2];
+            dst[1] = src[1];
+            dst[0] = src[0];
+            break;
+        }
+        case GSP_RGB565_OES:
+        {
+            // thanks neobrain
+            u16 px = *(u16 *)src;
+            blue = px & 0x1F;
+            green = (px >> 5) & 0x3F;
+            red = (px >> 11) & 0x1F;
 
-    //u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
-    framebufferCacheEnd = RframebufferCache + Draw_GetFramebufferCacheSize();
-	//bool dummy = true;
-    u8 *buf = RframebufferCache;
+            dst[0] = (blue  << 3) | (blue  >> 2);
+            dst[1] = (green << 2) | (green >> 4);
+            dst[2] = (red   << 3) | (red   >> 2);
 
-	//u8 *header = framebufferCache;
-	
-	//u32 nlines = 480;
-    //Draw_CreateBitmapHeader(RframebufferCache, 400, 240);
-	Draw_CreateBitmapHeader(RframebufferCache, 400, 240);
-    buf += 54;									//header
+            break;
+        }
+        case GSP_RGB5_A1_OES:
+        {
+            u16 px = *(u16 *)src;
+            blue = (px >> 1) & 0x1F;
+            green = (px >> 6) & 0x1F;
+            red = (px >> 11) & 0x1F;
 
-    //u32 y = 0;
-    // Our buffer might be smaller than the size of the screenshot...
-    //while (remaining != 180)
-	
-        //s64 t0 = svcGetSystemTick();
-        u32 available = (u32)(framebufferCacheEnd - buf);
-        u32 size = available < remaining ? available : remaining;
-        u32 nlines = size / lineSize;
+            dst[0] = (blue  << 3) | (blue  >> 2);
+            dst[1] = (green << 3) | (green >> 2);
+            dst[2] = (red   << 3) | (red   >> 2);
 
-		//if(dummy){
-		//Draw_ConvertFrameBufferLines(buf, 400, y, nlines/2, true, false);
-		//framebufferCache = (u8 *)Draw_GetFramebufferCache();
-		//Draw_ConvertFrameBufferLines(buf, 400, y + 240, nlines/2, true, true);
-		//dummy = false;
-		//}
+            break;
+        }
+        case GSP_RGBA4_OES:
+        {
+            u16 px = *(u32 *)src;
+            blue = (px >> 4) & 0xF;
+            green = (px >> 8) & 0xF;
+            red = (px >> 12) & 0xF;
 
+            dst[0] = (blue  << 4) | (blue  >> 0);
+            dst[1] = (green << 4) | (green >> 0);
+            dst[2] = (red   << 4) | (red   >> 0);
 
-        //s64 t1 = svcGetSystemTick();
-        //timeSpentConvertingScreenshot += t1 - t0;
-        //TRY(IFile_Write(file, &total, LframebufferCache, 54  + lineSize  * nlines, 0)); // don't forget to write the header
-		TRY(IFile_Write(file, &total, RframebufferCache, 54 + lineSize  * nlines, 0)); // don't forget to write the header
-		//TRY(IFile_Write(file, &total, buf, lineSize * nlines, 0));
-        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
-
-        //y += nlines;
-        //remaining -= lineSize * nlines;
-        //buf = framebufferCache;
-    
-	end:
-
-    //Draw_FreeFramebufferCache();
-    return res;
+            break;
+        }
+        default: break;
+    }
 }
 
-static Result WriteL(IFile *file)
+typedef struct FrameBufferConvertArgs {
+    u8 *buf;
+} FrameBufferConvertArgs;
+
+static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
 {
- u64 total;
-    Result res = 0;
-    u32 lineSize = 3 * 400;
-    u32 remaining = lineSize * 240 ;
+    static const u8 formatSizes[] = { 4, 3, 2, 2, 2 };
+
+    GSPGPU_FramebufferFormat fmt = (GSPGPU_FramebufferFormat)(GPU_FB_TOP_FMT & 7) ;
+    u32 width = 400;
+    u32 stride = GPU_FB_TOP_STRIDE;
+
+    u32 pa = Draw_GetCurrentFramebufferAddress(true, true);	//left framebuffer
+    u8 *addr = (u8 *)KERNPA2VA(pa);
+
+    for (u32 y = 0; y < 240; y++)
+    {
+        for(u32 x = 0; x < width; x++)
+        {
+            __builtin_prefetch(addr + x * stride + y * formatSizes[fmt], 0, 3);
+            ConvertPixelToBGR8(args->buf + (x + width * y) * 3 , addr + x * stride + y * formatSizes[fmt], fmt);
+        }
+    }
 	
-	//Draw_FreeFramebufferCache();
-	
-    //TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
+	pa = Draw_GetCurrentFramebufferAddress(true, false);	//right framebuffer
+    addr = (u8 *)KERNPA2VA(pa);
 
-    //u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
-    framebufferCacheEnd = LframebufferCache + Draw_GetFramebufferCacheSize();
-	//bool dummy = true;
-    u8 *buf = LframebufferCache;
-
-	//u8 *header = framebufferCache;
-	
-	//u32 nlines = 480;
-    //Draw_CreateBitmapHeader(RframebufferCache, 400, 240);
-	Draw_CreateBitmapHeader(LframebufferCache, 400, 240);
-    buf += 54;									//header
-
-    //u32 y = 0;
-    // Our buffer might be smaller than the size of the screenshot...
-    //while (remaining != 180)
-	
-        //s64 t0 = svcGetSystemTick();
-        u32 available = (u32)(framebufferCacheEnd - buf);
-        u32 size = available < remaining ? available : remaining;
-        u32 nlines = size / lineSize;
-
-		//if(dummy){
-		//Draw_ConvertFrameBufferLines(buf, 400, y, nlines/2, true, false);
-		//framebufferCache = (u8 *)Draw_GetFramebufferCache();
-		//Draw_ConvertFrameBufferLines(buf, 400, y + 240, nlines/2, true, true);
-		//dummy = false;
-		//}
-
-
-        //s64 t1 = svcGetSystemTick();
-        //timeSpentConvertingScreenshot += t1 - t0;
-        TRY(IFile_Write(file, &total, LframebufferCache, 54  + lineSize  * nlines, 0)); // don't forget to write the header
-		//TRY(IFile_Write(Rfile, &total, RframebufferCache, (y == 0 ? 54 : 0) + lineSize  * nlines, 0)); // don't forget to write the header
-		//TRY(IFile_Write(file, &total, buf, lineSize * nlines, 0));
-        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
-
-        //y += nlines;
-        //remaining -= lineSize * nlines;
-        //buf = framebufferCache;
-    
-	end:
-
-    //Draw_FreeFramebufferCache();
-    return res;
+    for (u32 y = 240; y < 480; y++)
+    {
+        for(u32 x = 0; x < width; x++)
+        {
+            __builtin_prefetch(addr - 1 + x * stride + y * formatSizes[fmt], 0, 3);
+            ConvertPixelToBGR8(args->buf + (x + width * y) * 3 , addr + x * stride + y * formatSizes[fmt], fmt);
+        }
+    }
 }
 
-/*
-static Result WriteL(IFile *file)
+
+
+void ConvertFrameBufferLines(u8 *buf)
+{
+    FrameBufferConvertArgs args = { buf };
+    svcCustomBackdoor(ConvertFrameBufferLinesKernel, &args);
+}
+
+
+static Result CacheToFile(IFile *file)
 {
  u64 total;
     Result res = 0;
     u32 lineSize = 3 * 400;
-    u32 remaining = lineSize * 240;
-	
-	//Draw_FreeFramebufferCache();
-	
+    u32 remaining = lineSize * 240 * 2;
+
+
     //TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
 
     //u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
     //u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
 
-    //u8 *buf = framebufferCache;
-
-	//u8 *header = framebufferCache;
+    u8 *buf = framebufferCache;
+	u8 *header = framebufferCache;
 	
 	//u32 nlines = 480;
-    Draw_CreateBitmapHeader(framebufferCache, 400, 240);
+    Draw_CreateBitmapHeader(header, 400, 480);
     buf += 54;									//header
 
     u32 y = 0;
@@ -168,30 +158,24 @@ static Result WriteL(IFile *file)
         u32 available = (u32)(framebufferCacheEnd - buf);
         u32 size = available < remaining ? available : remaining;
         u32 nlines = size / lineSize;
-
-		//Draw_ConvertFrameBufferLines(buf, 400, y + 240, nlines/2, true, false);
-		
-		Draw_ConvertFrameBufferLines(buf, 400, y, nlines, true, true);
-
-		
-
+        //Draw_ConvertFrameBufferLines(buf, 400, y, nlines, true, left);
 
         //s64 t1 = svcGetSystemTick();
         //timeSpentConvertingScreenshot += t1 - t0;
-        TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
+        TRY(IFile_Write(file, &total, header, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
 		//TRY(IFile_Write(file, &total, buf, lineSize * nlines, 0));
         //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
-
+		
         y += nlines;
         remaining -= lineSize * nlines;
-        //buf = framebufferCache;
+        buf = header;
     }
 	end:
 
     //Draw_FreeFramebufferCache();
     return res;
 }
-*/
+
 
 /*
 void TopScreenToCache(void)
@@ -269,17 +253,11 @@ void createImageFiles(void)
     }
 
     dateTimeToString(dateTimeStr, osGetTime(), true);
-	
-	sprintf(filename, "/luma/screenshots/%s_L.bmp", dateTimeStr);
-    TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    TRY(WriteL(&file));
-    TRY(IFile_Close(&file));
 
-    sprintf(filename, "/luma/screenshots/%s_R.bmp", dateTimeStr);
+    sprintf(filename, "/luma/screenshots/%s_pair.bmp", dateTimeStr);
     TRY(IFile_Open(&file, archiveId, fsMakePath(PATH_EMPTY, ""), fsMakePath(PATH_ASCII, filename), FS_OPEN_CREATE | FS_OPEN_WRITE));
-    TRY(WriteR(&file));
+    TRY(CacheToFile(&file));
     TRY(IFile_Close(&file));
-	
 
 end:
     IFile_Close(&file);
@@ -317,39 +295,18 @@ void ScreenToCacheThreadMain(void)
 			Draw_Lock();
 			svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
 			svcSleepThread(5 * 1000 * 100LL);
+			
+			
+			
+			//if the following 3 lines are called more than once, 3ds crashes
+			Draw_AllocateFramebufferCacheForScreenshot(3 * 400 * 240 *2);	
+			
+			framebufferCache = (u8 *)Draw_GetFramebufferCache();
+			
+			framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
+			
+			ConvertFrameBufferLines(framebufferCache);
 
-			//idk what im doing anymore
-			Draw_GetCurrentScreenInfo(&topWidth, &is3d, true);
-			
-			Draw_AllocateFramebufferCacheForScreenshot(3 * 400 * 240);	
-			
-
-			
-			RframebufferCache = (u8 *)Draw_GetFramebufferCache();
-			Draw_ConvertFrameBufferLines(RframebufferCache, 400, 0, 240 , true, false);
-			
-			LframebufferCache = (u8 *)Draw_GetFramebufferCache();
-			Draw_ConvertFrameBufferLines(LframebufferCache, 400, 0, 240, true, true);
-			
-			//framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
-			
-			//Draw_FreeFramebufferCache();
-
-			//svcFlushEntireDataCache();
-			
-			
-			
-			
-			
-
-			
-			
-			
-			
-			
-
-			svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
-			svcSleepThread(5 * 1000 * 100LL);
 			
 			
 			//Draw_ConvertFrameBufferLines(bufR, 400, 0, 240, true, false);
@@ -393,10 +350,10 @@ void CacheToFileThreadMain(void)
 			svcSleepThread(1000000000);
 			Draw_Lock();
 			createImageFiles();
-			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
-			//svcSleepThread(5 * 1000 * 100LL);
+			svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
+			svcSleepThread(5 * 1000 * 100LL);
 			readyToWrite = 0;
-			Draw_FreeFramebufferCache();
+			//Draw_FreeFramebufferCache();
 			Draw_Unlock();
 		}
 	}
@@ -421,4 +378,5 @@ MyThread *datasetCapture_CreateFileWriteThread(void)
 		svcBreak(USERBREAK_PANIC);
 	return &WriteThread;
 }
+
 

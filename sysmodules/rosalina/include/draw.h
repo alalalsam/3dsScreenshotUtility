@@ -109,3 +109,5 @@ void Draw_GetCurrentScreenInfo(u32 *width, bool *is3d, bool top);
 
 void Draw_CreateBitmapHeader(u8 *dst, u32 width, u32 heigth);
 void Draw_ConvertFrameBufferLines(u8 *buf, u32 width, u32 startingLine, u32 numLines, bool top, bool left);
+
+

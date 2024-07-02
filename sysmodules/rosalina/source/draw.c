@@ -132,7 +132,7 @@ void Draw_ClearFramebuffer(void)
 Result Draw_AllocateFramebufferCache(u32 size)
 {
     // Can't use fbs in FCRAM when Home Menu is active (AXI config related maybe?)
-    u32 addr = 0x0D000000;
+    u32 addr = 0x0D000000;	//D to C
     u32 tmp;
 
     size = (size + 0xFFF) >> 12 << 12; // round-up
