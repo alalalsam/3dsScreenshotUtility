@@ -1,4 +1,4 @@
-
+dsgadfgsdfg
 3dsScreenshotUtility
 This program is basically just normal Luma3DS, except it takes a screenshot every couple seconds, for the purpose of building a large ml dataset. Credit for 99% of this work goes to the creators of Luma3ds, since I really only added like 2 files and 1 line of extra code in existing files.
 
