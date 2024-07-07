@@ -108,6 +108,7 @@ static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
         }
     }
 	
+	
 	pa = Draw_GetCurrentFramebufferAddress(true, false);	//right framebuffer
     addr = (u8 *)KERNPA2VA(pa);
 
@@ -115,8 +116,8 @@ static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
     {
         for(u32 x = 0; x < width; x++)
         {
-            __builtin_prefetch(addr - 1 + x * stride + y * formatSizes[fmt], 0, 3);
-            ConvertPixelToBGR8(args->buf + (x + width * y) * 3 , addr + x * stride + y * formatSizes[fmt], fmt);
+            __builtin_prefetch(addr - 720 + x * stride + y * formatSizes[fmt], 0, 3);
+            ConvertPixelToBGR8(args->buf + (x + 18 + width * y) * 3 , addr - 720 + x * stride + y * formatSizes[fmt], fmt);	//+18 affects horizontal shift
         }
     }
 }
@@ -294,12 +295,16 @@ void ScreenToCacheThreadMain(void)
         if(SliderIsMax()){					//captures gameplay only at full 3d mode
 			Draw_Lock();
 			svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
-			svcSleepThread(5 * 1000 * 100LL);
+			//svcSleepThread(5 * 1000 * 100LL);
 			
 			
-			
-			//if the following 3 lines are called more than once, 3ds crashes
-			Draw_AllocateFramebufferCacheForScreenshot(3 * 400 * 240 *2);	
+			Draw_AllocateFramebufferCacheForScreenshot(720 + (3 * 400 * 240 *2));
+			/*
+			(3 * 400 * 240 * 2) for capturing left and right images present during 3d mode.
+			+ 720 (which is 240 * 3) adds a "noise margin" so that the noise generated from the first framebuffer 
+			conversion doesn't appear as random pixels in the second framebuffer conversion.
+			*/
+				
 			
 			framebufferCache = (u8 *)Draw_GetFramebufferCache();
 			
@@ -347,11 +352,11 @@ void CacheToFileThreadMain(void)
 		if (!readyToWrite)
 			continue;
 		else{
-			svcSleepThread(1000000000);
+			//svcSleepThread(1000000000);
 			Draw_Lock();
 			createImageFiles();
 			svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
-			svcSleepThread(5 * 1000 * 100LL);
+			//svcSleepThread(5 * 1000 * 100LL);
 			readyToWrite = 0;
 			//Draw_FreeFramebufferCache();
 			Draw_Unlock();
