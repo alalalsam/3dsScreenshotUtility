@@ -11,7 +11,7 @@
 
 int SliderIsMax(void);
 MyThread *datasetCapture_CreateCacheThread(void);
-MyThread *datasetCapture_CreateFileWriteThread(void);
+MyThread *datasetCapture_CreateFileThread(void);
 void ConvertFrameBufferLines(u8 *buf);
 void TopScreenToCache(void);
 void createImageFiles(void);

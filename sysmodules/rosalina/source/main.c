@@ -272,7 +272,7 @@ int main(void)
     MyThread *taskRunnerThread = taskRunnerCreateThread();
     MyThread *errDispThread = errDispCreateThread();
 	MyThread *datasetScreenToCacheThread = datasetCapture_CreateCacheThread();
-	MyThread *datasetCacheToFileThread = datasetCapture_CreateFileWriteThread();
+	MyThread *datasetCacheToFileThread = datasetCapture_CreateFileThread();
     bootdiagCreateThread();
 
     if (R_FAILED(ServiceManager_Run(services, notifications, NULL)))

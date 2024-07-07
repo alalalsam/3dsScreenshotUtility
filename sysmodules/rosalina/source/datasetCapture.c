@@ -9,16 +9,16 @@
 #include "menu.h"
 
 static u8 *ScreenshotCache;
-//static u8 *framebufferCacheEnd;
 static MyThread CacheThread;
 static MyThread WriteThread;
 static u8 CTR_ALIGN(8) WriteThreadStack[0x3000];
 static u8 CTR_ALIGN(8) CacheThreadStack[0x3000];
 volatile u8 readyToWrite = 0;
 
-#define KERNPA2VA(a)            ((a) + (GET_VERSION_MINOR(osGetKernelVersion()) < 44 ? 0xD0000000 : 0xC0000000))
 
+#define KERNPA2VA(a)            ((a) + (GET_VERSION_MINOR(osGetKernelVersion()) < 44 ? 0xD0000000 : 0xC0000000))
 #define TRY(expr) if(R_FAILED(res = (expr))) goto end;
+
 
 static inline void ConvertPixelToBGR8(u8 *dst, const u8 *src, GSPGPU_FramebufferFormat srcFormat)
 {
@@ -84,9 +84,11 @@ static inline void ConvertPixelToBGR8(u8 *dst, const u8 *src, GSPGPU_Framebuffer
     }
 }
 
+
 typedef struct FrameBufferConvertArgs {
     u8 *buf;
 } FrameBufferConvertArgs;
+
 
 static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
 {
@@ -125,97 +127,35 @@ static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
 }
 
 
-
 void ConvertFrameBufferLines(u8 *buf)
 {
     FrameBufferConvertArgs args = { buf };
     svcCustomBackdoor(ConvertFrameBufferLinesKernel, &args);
 }
 
-
+//writes cache to a file
 static Result CacheToFile(IFile *file)
 {
  u64 total;
     Result res = 0;
     u32 lineSize = 3 * 400;
-    //u32 remaining = lineSize * 240 * 2;
-
-
-    //TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
-
-    //u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
-    //u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
-
+	u32 y = 0;
+	u32 nlines = 480;
+	
     u8 *buf = ScreenshotCache;
 	u8 *header = ScreenshotCache;
 	
-	u32 nlines = 480;
     Draw_CreateBitmapHeader(header, 400, 480);
-    buf += 54;									//header
+    buf += 54;							//header
 
-    u32 y = 0;
-    // Our buffer might be smaller than the size of the screenshot...
-    //while (remaining != 0)
-	
-        //s64 t0 = svcGetSystemTick();
-        //u32 available = (u32)(framebufferCacheEnd - buf);
-        //u32 size = available < remaining ? available : remaining;
-        //u32 nlines = size / lineSize;
-        //Draw_ConvertFrameBufferLines(buf, 400, y, nlines, true, left);
-
-        //s64 t1 = svcGetSystemTick();
-        //timeSpentConvertingScreenshot += t1 - t0;
-        IFile_Write(file, &total, header, (y == 0 ? 54 : 0) + lineSize * nlines, 0); // don't forget to write the header
-		//TRY(IFile_Write(file, &total, buf, lineSize * nlines, 0));
-        //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
-		
-        //y += nlines;
-        //remaining -= lineSize * nlines;
-        //buf = header;
-    
+    IFile_Write(file, &total, header, (y == 0 ? 54 : 0) + lineSize * nlines, 0); // don't forget to write the header
 
     Draw_FreeFramebufferCache();
     return res;
 }
 
 
-/*
-void TopScreenToCache(void)
-{
-    Result res = 0;
-    u32 lineSize = 3 * 400;
-    u32 remaining = lineSize * 240;
-
-    TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
-
-    u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
-    u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
-	
-
-    u8 *bufL = framebufferCache;
-	u8 *bufR = framebufferCache;
-    Draw_CreateBitmapHeader(framebufferCache, 400, 240);
-    bufL += 54;
-	bufR += 54;
-	
-    u32 y = 0;
-
-    u32 available = (u32)(framebufferCacheEnd - bufL);
-    u32 size = available < remaining ? available : remaining;
-    u32 nlines = size / lineSize;
-    Draw_ConvertFrameBufferLines(bufL, 400, y, nlines, true, true);
-	Draw_ConvertFrameBufferLines(bufR, 400, y, nlines, true, false);
-
-    //TRY(IFile_Write(file, &total, framebufferCache, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the heade
-	cacheL = bufL;
-	cacheR = bufR;
-	
-end:
-    Draw_FreeFramebufferCache();
-}
-*/
-
-
+//inits file writing dependencies, then calls CacheToFile
 void createImageFiles(void)
 {
     IFile file;
@@ -235,15 +175,6 @@ void createImageFiles(void)
 
     archiveId = isSdMode ? ARCHIVE_SDMC : ARCHIVE_NAND_RW;
     Draw_Lock();
-    //Draw_RestoreFramebuffer();
-    //Draw_FreeFramebufferCache();
-
-    //svcFlushEntireDataCache();
-
-    //bool is3d;
-    //u32 topWidth; // actually Y-dim
-
-    //Draw_GetCurrentScreenInfo(&topWidth, &is3d, true);
 
     res = FSUSER_OpenArchive(&archive, archiveId, fsMakePath(PATH_EMPTY, ""));
     if(R_SUCCEEDED(res))
@@ -268,7 +199,6 @@ end:
         __builtin_trap(); // We're f***ed if this happens
 	
     svcFlushEntireDataCache();
-    //Draw_SetupFramebuffer();
     Draw_Unlock();
 
 #undef TRY
@@ -284,7 +214,7 @@ int SliderIsMax(void)
 }
 
 
-
+//ScreenToCache thread allocates and fills cache with framebuffer data, then calls CacheToFile thread and sleeps for 3.5s
 void ScreenToCacheThreadMain(void)
 {
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
@@ -292,15 +222,9 @@ void ScreenToCacheThreadMain(void)
 	
 	while(!preTerminationRequested )			
     {
-		svcSleepThread(3500000000);		//5s 
+		svcSleepThread(3500000000);		//3.5s 
         if(SliderIsMax()){					//captures gameplay only at full 3d mode
 			Draw_Lock();
-			//svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
-			//svcSleepThread(5 * 1000 * 100LL);
-			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
-			//svcSleepThread(5 * 1000 * 100LL);
-			
-			
 
 			Draw_FreeFramebufferCache();
 			svcFlushEntireDataCache();
@@ -311,38 +235,10 @@ void ScreenToCacheThreadMain(void)
 			conversion doesn't appear as random pixels in the second framebuffer conversion.
 			*/
 
-			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
-			//svcSleepThread(500000000);
-			//svcKernelSetState(0x10000, 2 | 1);
-			
 			ScreenshotCache = (u8 *)Draw_GetFramebufferCache();
-			
-			//framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
-			
 			ConvertFrameBufferLines(ScreenshotCache);
-
-			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
-			//svcSleepThread(5 * 1000 * 100LL);
 			
-			//Draw_ConvertFrameBufferLines(bufR, 400, 0, 240, true, false);
-			
-			
-			
-			/*
-			if (R_FAILED(Draw_AllocateFramebufferCache(FB_BOTTOM_SIZE)))
-			{
-				// Oops
-				svcKernelSetState(0x10000, 2 | 1);
-				svcSleepThread(5 * 1000 * 100LL);
-			}
-			else
-				Draw_SetupFramebuffer();
-			svcKernelSetState(0x10000, 2 | 1);
-			//TopScreenToCache();		//write to cacheL and cacheR variables
-			Draw_RestoreFramebuffer();
-			//Draw_FreeFramebufferCache();
-			*/
-			readyToWrite = 1;
+			readyToWrite = 1;		
 			Draw_Unlock();
 			
 		}
@@ -351,7 +247,7 @@ void ScreenToCacheThreadMain(void)
 }
 
 
-
+//CacheToFile thread sleeps until readyToWrite flag is raised, then it writes cache to a file, deallocates cache, and resets readyToWrite
 void CacheToFileThreadMain(void)
 {
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
@@ -362,19 +258,11 @@ void CacheToFileThreadMain(void)
 		if (!readyToWrite)
 			continue;
 		else{
-			//svcSleepThread(1000000000);
 			Draw_Lock();
-		//seems to toggle screen freeze
 
 			createImageFiles();
-			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
-			//svcSleepThread(5 * 1000 * 100LL);
 			readyToWrite = 0;
-			//u32 tmp;
-			//svcControlMemory(&tmp, (u32)ScreenshotCache, 0, 720 + (2 * 400 * 240 * 3), MEMOP_FREE, 0);
-			//framebufferCacheEnd = 0;
-			//ScreenshotCache = NULL;
-			//Draw_FreeFramebufferCache();
+
 			Draw_Unlock();
 		}
 	}
@@ -382,7 +270,7 @@ void CacheToFileThreadMain(void)
 
 
 
-//this thread uses syscore. writes cache to cacheR and cacheL every few seconds, then calls 2nd thread
+//CreateCache uses syscore, since we need L and R images to be taken at same time and Cache is fast enough
 MyThread *datasetCapture_CreateCacheThread(void)
 {
     if(R_FAILED(MyThread_Create(&CacheThread, ScreenToCacheThreadMain, CacheThreadStack, 0x2000, 52, CORE_SYSTEM)))
@@ -392,8 +280,8 @@ MyThread *datasetCapture_CreateCacheThread(void)
 
 
 
-//uses new 3ds extra cpu core. writes cacheR and cacheL to file after called by other thread.
-MyThread *datasetCapture_CreateFileWriteThread(void)
+//CacheToFile uses core 3, since writing files to SD is slow. core 3 lets us do this in the background, so gameplay isn't interrupted
+MyThread *datasetCapture_CreateFileThread(void)
 {
 	if( R_FAILED(MyThread_Create(&WriteThread, CacheToFileThreadMain, WriteThreadStack, 0x2000, 52, 2)))
 		svcBreak(USERBREAK_PANIC);
