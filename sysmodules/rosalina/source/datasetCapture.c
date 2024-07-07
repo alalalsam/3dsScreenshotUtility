@@ -8,12 +8,12 @@
 #include "plugin.h"
 #include "menu.h"
 
-static u8 *framebufferCache;
-static u8 *framebufferCacheEnd;
+static u8 *ScreenshotCache;
+//static u8 *framebufferCacheEnd;
 static MyThread CacheThread;
 static MyThread WriteThread;
-static u8 CTR_ALIGN(8) WriteThreadStack[0x4000];
-static u8 CTR_ALIGN(8) CacheThreadStack[0x4000];
+static u8 CTR_ALIGN(8) WriteThreadStack[0x3000];
+static u8 CTR_ALIGN(8) CacheThreadStack[0x3000];
 volatile u8 readyToWrite = 0;
 
 #define KERNPA2VA(a)            ((a) + (GET_VERSION_MINOR(osGetKernelVersion()) < 44 ? 0xD0000000 : 0xC0000000))
@@ -104,7 +104,7 @@ static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
         for(u32 x = 0; x < width; x++)
         {
             __builtin_prefetch(addr + x * stride + y * formatSizes[fmt], 0, 3);
-            ConvertPixelToBGR8(args->buf + (x + width * y) * 3 , addr + x * stride + y * formatSizes[fmt], fmt);
+            ConvertPixelToBGR8(args->buf + (x + 18 + width * y) * 3 , addr + x * stride + y * formatSizes[fmt], fmt); //shift +18 horizontally
         }
     }
 	
@@ -117,7 +117,9 @@ static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
         for(u32 x = 0; x < width; x++)
         {
             __builtin_prefetch(addr - 720 + x * stride + y * formatSizes[fmt], 0, 3);
-            ConvertPixelToBGR8(args->buf + (x + 18 + width * y) * 3 , addr - 720 + x * stride + y * formatSizes[fmt], fmt);	//+18 affects horizontal shift
+            ConvertPixelToBGR8(args->buf + (x + 18 + width * y) * 3 , addr - 720 + x * stride + y * formatSizes[fmt], fmt);	//shift +18 horizontally
+			//also, addr - 720 to skip the first column after the first framebuffer is converted, since that column is filled with
+			//random values during the first screenshot conversion
         }
     }
 }
@@ -136,7 +138,7 @@ static Result CacheToFile(IFile *file)
  u64 total;
     Result res = 0;
     u32 lineSize = 3 * 400;
-    u32 remaining = lineSize * 240 * 2;
+    //u32 remaining = lineSize * 240 * 2;
 
 
     //TRY(Draw_AllocateFramebufferCacheForScreenshot(remaining));
@@ -144,36 +146,35 @@ static Result CacheToFile(IFile *file)
     //u8 *framebufferCache = (u8 *)Draw_GetFramebufferCache();
     //u8 *framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
 
-    u8 *buf = framebufferCache;
-	u8 *header = framebufferCache;
+    u8 *buf = ScreenshotCache;
+	u8 *header = ScreenshotCache;
 	
-	//u32 nlines = 480;
+	u32 nlines = 480;
     Draw_CreateBitmapHeader(header, 400, 480);
     buf += 54;									//header
 
     u32 y = 0;
     // Our buffer might be smaller than the size of the screenshot...
-    while (remaining != 0)
-	{
+    //while (remaining != 0)
+	
         //s64 t0 = svcGetSystemTick();
-        u32 available = (u32)(framebufferCacheEnd - buf);
-        u32 size = available < remaining ? available : remaining;
-        u32 nlines = size / lineSize;
+        //u32 available = (u32)(framebufferCacheEnd - buf);
+        //u32 size = available < remaining ? available : remaining;
+        //u32 nlines = size / lineSize;
         //Draw_ConvertFrameBufferLines(buf, 400, y, nlines, true, left);
 
         //s64 t1 = svcGetSystemTick();
         //timeSpentConvertingScreenshot += t1 - t0;
-        TRY(IFile_Write(file, &total, header, (y == 0 ? 54 : 0) + lineSize * nlines, 0)); // don't forget to write the header
+        IFile_Write(file, &total, header, (y == 0 ? 54 : 0) + lineSize * nlines, 0); // don't forget to write the header
 		//TRY(IFile_Write(file, &total, buf, lineSize * nlines, 0));
         //timeSpentWritingScreenshot += svcGetSystemTick() - t1;
 		
-        y += nlines;
-        remaining -= lineSize * nlines;
-        buf = header;
-    }
-	end:
+        //y += nlines;
+        //remaining -= lineSize * nlines;
+        //buf = header;
+    
 
-    //Draw_FreeFramebufferCache();
+    Draw_FreeFramebufferCache();
     return res;
 }
 
@@ -265,8 +266,8 @@ end:
 
     if (R_FAILED(Draw_AllocateFramebufferCache(FB_BOTTOM_SIZE)))
         __builtin_trap(); // We're f***ed if this happens
-
-    //svcFlushEntireDataCache();
+	
+    svcFlushEntireDataCache();
     //Draw_SetupFramebuffer();
     Draw_Unlock();
 
@@ -291,28 +292,37 @@ void ScreenToCacheThreadMain(void)
 	
 	while(!preTerminationRequested )			
     {
-		svcSleepThread(3500000000);		//3.5s 
+		svcSleepThread(3500000000);		//5s 
         if(SliderIsMax()){					//captures gameplay only at full 3d mode
 			Draw_Lock();
-			svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
+			//svcKernelSetState(0x10000, 2 | 1);		//toggles OS freeze
+			//svcSleepThread(5 * 1000 * 100LL);
+			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
 			//svcSleepThread(5 * 1000 * 100LL);
 			
 			
+
+			Draw_FreeFramebufferCache();
+			svcFlushEntireDataCache();
 			Draw_AllocateFramebufferCacheForScreenshot(720 + (3 * 400 * 240 *2));
 			/*
-			(3 * 400 * 240 * 2) for capturing left and right images present during 3d mode.
+			(3 * 400 * 240 * 2) is allocated for capturing left and right images present during 3d mode.
 			+ 720 (which is 240 * 3) adds a "noise margin" so that the noise generated from the first framebuffer 
 			conversion doesn't appear as random pixels in the second framebuffer conversion.
 			*/
-				
-			
-			framebufferCache = (u8 *)Draw_GetFramebufferCache();
-			
-			framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
-			
-			ConvertFrameBufferLines(framebufferCache);
 
+			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
+			//svcSleepThread(500000000);
+			//svcKernelSetState(0x10000, 2 | 1);
 			
+			ScreenshotCache = (u8 *)Draw_GetFramebufferCache();
+			
+			//framebufferCacheEnd = framebufferCache + Draw_GetFramebufferCacheSize();
+			
+			ConvertFrameBufferLines(ScreenshotCache);
+
+			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
+			//svcSleepThread(5 * 1000 * 100LL);
 			
 			//Draw_ConvertFrameBufferLines(bufR, 400, 0, 240, true, false);
 			
@@ -354,10 +364,16 @@ void CacheToFileThreadMain(void)
 		else{
 			//svcSleepThread(1000000000);
 			Draw_Lock();
+		//seems to toggle screen freeze
+
 			createImageFiles();
-			svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
+			//svcKernelSetState(0x10000, 2 | 1);		//seems to toggle screen freeze
 			//svcSleepThread(5 * 1000 * 100LL);
 			readyToWrite = 0;
+			//u32 tmp;
+			//svcControlMemory(&tmp, (u32)ScreenshotCache, 0, 720 + (2 * 400 * 240 * 3), MEMOP_FREE, 0);
+			//framebufferCacheEnd = 0;
+			//ScreenshotCache = NULL;
 			//Draw_FreeFramebufferCache();
 			Draw_Unlock();
 		}
