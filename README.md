@@ -1,12 +1,3 @@
-i sure hope this commit comes from my main account
-3dsScreenshotUtility
-This program is basically just normal Luma3DS, except it takes a screenshot every couple seconds, for the purpose of building a large ml dataset. Credit for 99% of this work goes to the creators of Luma3ds, since I really only added like 2 files and 1 line of extra code in existing files.
-
-based off of Luma3ds 13.1.1
-idk if it even works yet maybe I'm getting ahead of myself editing the readme.
-
-To use, download firmtool and makerom, add to path, and make using devkitPro.
-=======
 # Luma3DS
 
 *Nintendo 3DS "Custom Firmware"*
@@ -47,4 +38,3 @@ This software is licensed under the terms of the GPLv3. You can find a copy of t
 Files in the GDB stub are instead triple-licensed as MIT or "GPLv2 or any later version", in which case it's specified in the file header.
 
 By contributing to this repository, you agree to license your changes to the project's owners.
-

@@ -118,10 +118,10 @@ static void ConvertFrameBufferLinesKernel(const FrameBufferConvertArgs *args)
     {
         for(u32 x = 0; x < width; x++)
         {
-            __builtin_prefetch(addr - 720 + x * stride + y * formatSizes[fmt], 0, 3);
-            ConvertPixelToBGR8(args->buf + (x + 18 + width * y) * 3 , addr - 720 + x * stride + y * formatSizes[fmt], fmt);	//shift +18 horizontally
+            __builtin_prefetch(addr - 720 + x * stride + 240 + y * formatSizes[fmt], 0, 3);
+            ConvertPixelToBGR8(args->buf + (x + 18 + width * y) * 3 , addr - 720 + x * stride + 240 + y * formatSizes[fmt], fmt);	//shift +18 horizontally
 			//also, addr - 720 to skip the first column after the first framebuffer is converted, since that column is filled with
-			//random values during the first screenshot conversion
+			//random values during the first screenshot conversion. also +240 on y cuz i think home and applications use different framebuffers?
         }
     }
 }
@@ -225,18 +225,22 @@ void ScreenToCacheThreadMain(void)
 		svcSleepThread(3500000000);		//3.5s 
         if(SliderIsMax()){					//captures gameplay only at full 3d mode
 			Draw_Lock();
-
+			
 			Draw_FreeFramebufferCache();
 			svcFlushEntireDataCache();
+			svcKernelSetState(0x10000, 2 | 1);
+			svcSleepThread(5 * 1000 * 100LL);
 			Draw_AllocateFramebufferCacheForScreenshot(720 + (3 * 400 * 240 *2));
 			/*
 			(3 * 400 * 240 * 2) is allocated for capturing left and right images present during 3d mode.
 			+ 720 (which is 240 * 3) adds a "noise margin" so that the noise generated from the first framebuffer 
 			conversion doesn't appear as random pixels in the second framebuffer conversion.
 			*/
-
+			svcKernelSetState(0x10000, 2 | 1);
+			
 			ScreenshotCache = (u8 *)Draw_GetFramebufferCache();
 			ConvertFrameBufferLines(ScreenshotCache);
+			
 			
 			readyToWrite = 1;		
 			Draw_Unlock();
