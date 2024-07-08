@@ -18,7 +18,8 @@ The cache thread is housed on the SYSCORE, so I can freeze the kernel while cach
 huge thanks to the creators of [Luma3DS](https://github.com/LumaTeam/Luma3DS), whose work comprises the majority of this repository. The only real addition I made was datasetCapture.c and .h files in sysmodules/rosalina/includes and source. 
 
 ## How to Use 
-assuming you have modded your 3ds according to [this](https://3ds.hacks.guide/) guide, simply go to releases (on the right side of the screen) and place the boot.firm in your root 3ds directory, replacing the one thats currently there. Then you can simply use your 3ds as usual, and when you turn on the 3d slider to its maximum position, your 3ds will take screenshots every 3.5s
+assuming you have modded your 3ds according to [this](https://3ds.hacks.guide/) guide, simply go to releases (on the right side of the screen) and place the boot.firm in your root 3ds directory, replacing the one thats currently there. Then you can simply use your 3ds as usual, and when you turn on the 3d slider to its maximum position, your 3ds will take screenshots every 3.5s JUST KIDDING I'M NOT RELEASING 1.0 UNTIL I KNOW IT WORKS!
+if you somehow found this repository and REALLY want to use this code, you can compile the boot.firm with the same instructions for compiling Luma3DS [here](https://github.com/LumaTeam/Luma3DS)
 
 the current release (1.0) is based on Luma3DS V13.1.2
 
