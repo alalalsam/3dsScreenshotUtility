@@ -1,40 +1,25 @@
-# Luma3DS
+<<<<<<< HEAD
+## 3dsScreenshotUtility 
+is an add-on to Luma3DS where, if your 3d mode slider is at maximum, your 3ds will take a screenshot of the top screen 3d image-pairs every 3.5 seconds and save it to luma/screenshots in your SD root. I made this so that I could collect a large dataset of 3d image-pairs, for training a machine learning model to predict 3d image-pairs from a single input image.
 
-*Nintendo 3DS "Custom Firmware"*
+## Why?
+The 3ds 3d mode (and other stereoscopic 3d technology) works by displaying 2 images on the top screen at the same time, using a hardware shutter to block your view so that your eyes are viewing different images. The 2 images differ in that one is perspective shifted from the other, which creates an optical illusion that simulates depth to the viewer. A more in-depth explanation can be found [here](https://gbatemp.net/threads/better-stereoscopic-3d-patches-cheat-codes-releases-development-and-discussion.625945/). 
 
-## What it is
-**Luma3DS** is a program patching and reimplementing significant parts of the software running on all models of the Nintendo 3DS family of consoles.
+If you can easily generate these 3d image pairs, you can display 2d-images in 3d, with little effort. This could be useful for artists who have to manually "draw in" the 3d mode for movies, or for implementing 3d-viewing for any application. This add-on lets me collect a large amount of 3d image-pairs just by playing video games, which is pretty easy as far as dataset collection goes, and helps to exercise full control over development of a 3d stereo image-pair prediction model.
 
-It aims at greatly improving the user experience and at supporting the 3DS far beyond its end-of-life. Features include:
+## How it Works
+My code instantiates 2 threads in the rosalina process. One thread screen-captures the top screen, sending it to cache, then calls the second thread. The second thread writes the cached screencap to your SD card. This is implemented in this way because if I tried to cache and write on the same thread, it would interrupt gameplay or screencap the image pairs for different frames, depending on which CPU core I used. 
 
-* First class support of 3DSX homebrew
-* An overlay menu called "Rosalina" (triggerable by <kbd>L+Down+Select</kbd> by default), allowing amongst many thing to take screenshots while in-game
-* Removal of restrictions such as the region lock
-* Per-game language settings, asset content path redirection (LayeredFS), game plugins...
-* A fully-fledged GDB stub allowing to debug software (homebrew and system software alike)
-* ... and much more!
+The cache thread is housed on the SYSCORE, so I can freeze the kernel while caching to eliminate any chance of accidentally grabbing images from different frames. The write thread is housed on CORE3, so that it can write to SD in the backround, without interrupting the running application or system calls for hundreds of ms. 
 
-Luma3DS requires a full-system persisent exploit such as [boot9strap](https://github.com/SciresM/boot9strap) to run.
 
-## Compiling
+## THIS CODE DOES NOT WORK ON OLD 3DS because It uses CORE3, which is an extra CPU core only present on the new 3ds.
 
-To build Luma3DS, the following is needed:
-* git
-* up-to-date devkitARM and libctru
-* [makerom](https://github.com/jakcron/Project_CTR) in PATH
-* [firmtool](https://github.com/TuxSH/firmtool) installed
 
-The produced `boot.firm` is meant to be copied to the root of your SD card for usage with Boot9Strap.
+huge thanks to the creators of [Luma3DS](https://github.com/LumaTeam/Luma3DS), whose work comprises the majority of this repository. The only real addition I made was datasetCapture.c and .h files in sysmodules/rosalina/includes and source. 
 
-## Setup / Usage / Features
-See https://github.com/LumaTeam/Luma3DS/wiki (needs rework)
 
-## Credits
-See https://github.com/LumaTeam/Luma3DS/wiki/Credits (needs rework)
-
-## Licensing
-This software is licensed under the terms of the GPLv3. You can find a copy of the license in the LICENSE.txt file.
-
-Files in the GDB stub are instead triple-licensed as MIT or "GPLv2 or any later version", in which case it's specified in the file header.
-
-By contributing to this repository, you agree to license your changes to the project's owners.
+TODO:
+#**TO USE:** assuming you have modded your 3ds according to [this](https://3ds.hacks.guide/) guide, simply go to releases (on the right side of the screen) and place the boot.firm in your root 3ds directory, replacing the one thats currently there. It's probably bad practice 
+i havenet added release yet, i gotta update and build with latest Luma3DS version first.
+>>>>>>> f34bb5f31a7c616d1a567c0320f9ea5be3b78c3a
