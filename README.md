@@ -7,9 +7,9 @@ The 3ds 3d mode (and other stereoscopic 3d technology) works by displaying 2 ima
 If you can easily generate these 3d image pairs, you can create a ML-model to display 2d-images in 3d. This could be useful for artists who have to manually "draw in" the 3d mode for movies, or for implementing 3d-viewing for any application. This add-on lets me collect a large amount of 3d image-pairs just by playing video games, which is pretty easy as far as dataset collection goes, and helps to exercise full control over development of a 3d stereo image-pair prediction model.
 
 ## How it Works
-My code instantiates 2 threads in the rosalina process. One thread screen-captures the top screen, sending it to cache, then calls the second thread. The second thread writes the cached screencap to your SD card. This is implemented in this way because if I tried to cache and write on the same thread, it would interrupt gameplay or screencap the image pairs for different frames, depending on which CPU core I used. 
+My code instantiates 2 threads in the rosalina process. One thread screen-captures the top screen, sending it to cache, then calls the second thread. The second thread writes the cached screencap to your SD card. This is implemented in this way because caching and writing on the same thread would take a lot of time, which is bad because if you mistime framebuffer reads things gets real screwy.
 
-The cache thread is housed on the SYSCORE, so I can freeze the kernel while caching to eliminate any chance of accidentally grabbing images from different frames. The write thread is housed on CORE3, so that it can write to SD in the backround, without interrupting the running application or system calls for hundreds of ms. 
+The cache thread is housed on the APPCORE, so I can freeze the kernel while caching to eliminate any chance of accidentally grabbing images from different frames. The write thread is housed on CORE3, so that it can write to SD in the backround, without interrupting the running application or system calls for hundreds of ms. 
 
 
 ## THIS CODE DOES NOT WORK ON OLD 3DS because It uses CORE3, which is an extra CPU core only present on the new 3ds.
