@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## 3dsScreenshotUtility 
 is an add-on to Luma3DS where, if your 3d mode slider is at maximum, your 3ds will take a screenshot of the top screen 3d image-pairs every 3.5 seconds and save it to luma/screenshots in your SD root. I made this so that I could collect a large dataset of 3d image-pairs, for training a machine learning model to predict 3d image-pairs from a single input image.
 
@@ -18,8 +17,8 @@ The cache thread is housed on the SYSCORE, so I can freeze the kernel while cach
 
 huge thanks to the creators of [Luma3DS](https://github.com/LumaTeam/Luma3DS), whose work comprises the majority of this repository. The only real addition I made was datasetCapture.c and .h files in sysmodules/rosalina/includes and source. 
 
+## How to Use 
+assuming you have modded your 3ds according to [this](https://3ds.hacks.guide/) guide, simply go to releases (on the right side of the screen) and place the boot.firm in your root 3ds directory, replacing the one thats currently there. Then you can simply use your 3ds as usual, and when you turn on the 3d slider to its maximum position, your 3ds will take screenshots every 3.5s
 
-TODO:
-#**TO USE:** assuming you have modded your 3ds according to [this](https://3ds.hacks.guide/) guide, simply go to releases (on the right side of the screen) and place the boot.firm in your root 3ds directory, replacing the one thats currently there. It's probably bad practice 
-i havenet added release yet, i gotta update and build with latest Luma3DS version first.
->>>>>>> f34bb5f31a7c616d1a567c0320f9ea5be3b78c3a
+the current release (1.0) is based on Luma3DS V13.1.2
+
