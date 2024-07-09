@@ -12,7 +12,7 @@ My code instantiates 2 threads in the rosalina process. One thread screen-captur
 The cache thread is housed on the APPCORE, so I can freeze the kernel while caching to eliminate any chance of accidentally grabbing images from different frames. The write thread is housed on CORE3, so that it can write to SD in the backround, without interrupting the running application or system calls for hundreds of ms. 
 
 
-## THIS CODE DOES NOT WORK ON OLD 3DS because It uses CORE3, which is an extra CPU core only present on the new 3ds.
+## THIS CODE DOES NOT WORK ON OLD 3DS because It uses CORE4, which is an extra CPU core only present on the new 3ds.
 
 
 huge thanks to the creators of [Luma3DS](https://github.com/LumaTeam/Luma3DS), whose work comprises the majority of this repository. The only real addition I made was datasetCapture.c and .h files in sysmodules/rosalina/includes and source. 
