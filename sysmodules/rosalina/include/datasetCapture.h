@@ -9,7 +9,7 @@
 
 
 
-int SliderIsMax(void);
+int SliderMax(void);
 MyThread *datasetCapture_CreateCacheThread(void);
 MyThread *datasetCapture_CreateFileThread(void);
 void ConvertFrameBufferLines(u8 *buf);

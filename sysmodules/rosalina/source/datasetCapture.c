@@ -206,9 +206,9 @@ end:
 
 
 
-int SliderIsMax(void)
+int SliderMax(void)
 {
-	if(osGet3DSliderState() == 1.0)
+	if(osGet3DSliderState() == 1)
 		return 1;
 	return 0;
 }
@@ -220,30 +220,26 @@ void ScreenToCacheThreadMain(void)
 	while (!isServiceUsable("ac:u") || !isServiceUsable("hid:USER") || !isServiceUsable("gsp::Gpu") || !isServiceUsable("cdc:CHK"))
         svcSleepThread(250 * 1000 * 1000LL);
 	
-	while(!preTerminationRequested )			
-    {
-		svcSleepThread(3500000000);		//3.5s 
-        if(SliderIsMax()){					//captures gameplay only at full 3d mode
-			Draw_Lock();
-			
+	while(!preTerminationRequested)			
+    {	
+		svcSleepThread(250 * 1000 * 1000LL);
+        if(SliderMax()){
+			Draw_Lock();	
 			Draw_FreeFramebufferCache();
 			svcFlushEntireDataCache();
-			svcKernelSetState(0x10000, 2 | 1);
-			svcSleepThread(5 * 1000 * 100LL);
 			Draw_AllocateFramebufferCacheForScreenshot(720 + (3 * 400 * 240 *2));
 			/*
 			(3 * 400 * 240 * 2) is allocated for capturing left and right images present during 3d mode.
 			+ 720 (which is 240 * 3) adds a "noise margin" so that the noise generated from the first framebuffer 
 			conversion doesn't appear as random pixels in the second framebuffer conversion.
 			*/
-			svcKernelSetState(0x10000, 2 | 1);
-			
+
 			ScreenshotCache = (u8 *)Draw_GetFramebufferCache();
 			ConvertFrameBufferLines(ScreenshotCache);
-			
-			
+				
 			readyToWrite = 1;		
 			Draw_Unlock();
+			svcSleepThread(3500000000);		//3.5s
 			
 		}
 		
@@ -259,6 +255,7 @@ void CacheToFileThreadMain(void)
 	
 	while(!preTerminationRequested )			
     {	
+		svcSleepThread(250 * 1000 * 1000LL);
 		if (!readyToWrite)
 			continue;
 		else{
@@ -283,13 +280,17 @@ MyThread *datasetCapture_CreateCacheThread(void)
 }
 
 
-
-//CacheToFile uses core 3, since writing files to SD is slow. core 3 lets us do this in the background, so gameplay isn't interrupted
+/*
+this thread uses core 4 because some games don't let this thread execute if it's on core 3. I use 
+the new 3ds' extra cores so that the gameplay isn't interrupted.
+MyThread_Create() last arg. determines core: 0=appcore 1=syscore 2=core3 3=core4
+*/
 MyThread *datasetCapture_CreateFileThread(void)
 {
-	if( R_FAILED(MyThread_Create(&WriteThread, CacheToFileThreadMain, WriteThreadStack, 0x2000, 52, 2)))
+	if( R_FAILED(MyThread_Create(&WriteThread, CacheToFileThreadMain, WriteThreadStack, 0x2000, 52, 3)))
 		svcBreak(USERBREAK_PANIC);
 	return &WriteThread;
 }
 
 
+//rosalina menu crashes if you open it while the 3d mode is at max, and I am too lazy to figure out how to fix that rn.
